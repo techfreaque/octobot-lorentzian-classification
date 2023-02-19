@@ -1,7 +1,10 @@
 import typing
+import numpy.typing as npt
 
 import numpy
+import tulipy
 import tentacles.Evaluator.TA.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
+import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utils
 
 
 def series_from(feature_string, _close, _high, _low, _hlc3, f_paramA, f_paramB):
@@ -104,17 +107,17 @@ class KernelSettings:
         use_kernel_filter: bool,
         show_kernel_estimate: bool,
         use_kernel_smoothing: bool,
-        h: int,
-        r: float,
-        x: int,
+        lookback_window: int,
+        relative_weighting: float,
+        regression_level: int,
         lag: int,
     ):
         self.use_kernel_filter: bool = use_kernel_filter
         self.show_kernel_estimate: bool = show_kernel_estimate
         self.use_kernel_smoothing: bool = use_kernel_smoothing
-        self.h: int = h
-        self.r: float = r
-        self.x: int = x
+        self.lookback_window: int = lookback_window
+        self.relative_weighting: float = relative_weighting
+        self.regression_level: int = regression_level
         self.lag: int = lag
 
 
@@ -181,10 +184,45 @@ class FeatureEngineeringSettings:
 
 
 class Filter:
-    def __init__(self, volatility: bool, regime: bool, adx: bool):
-        self.volatility: bool = volatility
-        self.regime: bool = regime
-        self.adx: bool = adx
+    # numpy bool arays
+    def __init__(
+        self,
+        volatility,
+        regime,
+        adx,
+        is_ema_uptrend,
+        is_ema_downtrend,
+        is_sma_uptrend,
+        is_sma_downtrend,
+    ):
+        (
+            volatility,
+            regime,
+            adx,
+            is_ema_uptrend,
+            is_sma_uptrend,
+            is_ema_downtrend,
+            is_sma_downtrend,
+        ) = basic_utils.cut_data_to_same_len(
+            (
+                volatility,
+                regime,
+                adx,
+                is_ema_uptrend,
+                is_sma_uptrend,
+                is_ema_downtrend,
+                is_sma_downtrend,
+            )
+        )
+        # User Defined Filters: Used for adjusting the frequency of the ML Model's predictions
+        self.filter_all = numpy.logical_and(
+            volatility,
+            regime,
+            adx,
+        )
+        # Fractal Filters: Derived from relative appearances of signals in a given time series fractal/segment with a default length of 4 bars
+        self.is_uptrend = numpy.logical_and(is_ema_uptrend, is_sma_uptrend)
+        self.is_downtrend = numpy.logical_and(is_ema_downtrend, is_sma_downtrend)
 
 
 def shift_data(data_source: list or numpy.array, shift_by: int = 1):
@@ -205,3 +243,13 @@ def get_is_crossing_data(
         data1_shifted_1 > data2_shifted_1, data1_cutted_1 < data2_cutted_1
     )
     return crossing_ups, crossing_downs
+
+
+def calculate_rma(src, length):
+    alpha = 1 / length
+    sma: npt.NDArray[numpy.float64] = tulipy.sma(src, length)
+    src, sma = basic_utils.cut_data_to_same_len((src, sma))
+    rma: typing.List[float] = [0]
+    for index in range(1, len(src)):
+        rma.append(sma[index] if rma[-1] else alpha * src + (1 - alpha) * rma[-1])
+    return numpy.array(rma)

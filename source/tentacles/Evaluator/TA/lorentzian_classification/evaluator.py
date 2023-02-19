@@ -113,6 +113,7 @@ import octobot_commons.enums as enums
 import octobot_evaluators.evaluators as evaluators
 import octobot_evaluators.util as evaluators_util
 import octobot_trading.api as trading_api
+from tentacles.Evaluator.TA.lorentzian_classification.kernel_functions import kernel
 import tentacles.Evaluator.Util as EvaluatorUtil
 import tentacles.Evaluator.TA.lorentzian_classification.utils as utils
 import tentacles.Evaluator.TA.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
@@ -140,9 +141,6 @@ class LorentzianClassification(evaluators.TAEvaluator):
     display_settings: utils.DisplaySettings = None
     show_trade_stats: bool = None
     use_worst_case_estimates: bool = None
-
-    def __init__(self, tentacles_setup_config):
-        super().__init__(tentacles_setup_config)
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -293,175 +291,261 @@ class LorentzianClassification(evaluators.TAEvaluator):
             inputs,
             title="Feature Engineering Settings",
         )
-        self.feature_engineering_settings = utils.FeatureEngineeringSettings(
-            feature_count=self.UI.user_input(
-                "feature_count",
-                enums.UserInputTypes.INT,
-                5,
+        feature_count = self.UI.user_input(
+            "feature_count",
+            enums.UserInputTypes.INT,
+            5,
+            inputs,
+            min_val=2,
+            max_val=5,
+            title="Feature Count",
+            parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
+            other_schema_values={
+                "description": "Number of features to use for ML predictions."
+            },
+        )
+        feature_1_settings_name = "feature_1_settings"
+        self.UI.user_input(
+            feature_1_settings_name,
+            enums.UserInputTypes.OBJECT,
+            None,
+            inputs,
+            title="Feature 1",
+            parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
+        )
+        f1_string = self.UI.user_input(
+            "f1_string",
+            enums.UserInputTypes.OPTIONS,
+            title="Feature 1",
+            def_val="RSI",
+            registered_inputs=inputs,
+            options=["RSI", "WT", "CCI", "ADX"],
+            other_schema_values={
+                "description": "The first feature to use for ML predictions."
+            },
+            parent_input_name=feature_1_settings_name,
+        )
+        f1_paramA = self.UI.user_input(
+            "f1_paramA",
+            enums.UserInputTypes.INT,
+            title="Parameter A",
+            def_val=14,
+            registered_inputs=inputs,
+            other_schema_values={"description": "The primary parameter of feature 1."},
+            parent_input_name=feature_1_settings_name,
+        )
+        f1_paramB = self.UI.user_input(
+            "f1_paramB",
+            enums.UserInputTypes.INT,
+            title="Parameter B",
+            def_val=1,
+            registered_inputs=inputs,
+            other_schema_values={
+                "description": "The secondary parameter of feature 2 (if applicable)."
+            },
+            parent_input_name=feature_1_settings_name,
+        )
+        feature_2_settings_name = "feature_2_settings"
+        self.UI.user_input(
+            feature_2_settings_name,
+            enums.UserInputTypes.OBJECT,
+            None,
+            inputs,
+            title="Feature 2",
+            parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
+        )
+        f2_string = self.UI.user_input(
+            "f2_string",
+            enums.UserInputTypes.OPTIONS,
+            title="Feature 2",
+            def_val="WT",
+            registered_inputs=inputs,
+            options=["RSI", "WT", "CCI", "ADX"],
+            other_schema_values={
+                "description": "The second feature to use for ML predictions."
+            },
+            parent_input_name=feature_2_settings_name,
+        )
+        f2_paramA = self.UI.user_input(
+            "f2_paramA",
+            enums.UserInputTypes.INT,
+            title="Parameter A",
+            def_val=10,
+            registered_inputs=inputs,
+            other_schema_values={"description": "The primary parameter of feature 2."},
+            parent_input_name=feature_2_settings_name,
+        )
+        f2_paramB = self.UI.user_input(
+            "f2_paramB",
+            enums.UserInputTypes.INT,
+            title="Parameter B",
+            def_val=11,
+            registered_inputs=inputs,
+            other_schema_values={
+                "description": "The secondary parameter of feature 2 (if applicable)."
+            },
+            parent_input_name=feature_2_settings_name,
+        )
+        f3_string = None
+        f3_paramA = None
+        f3_paramB = None
+        f4_string = None
+        f4_paramA = None
+        f4_paramB = None
+        f5_string = None
+        f5_paramA = None
+        f5_paramB = None
+        if feature_count > 2:
+            feature_3_settings_name = "feature_3_settings"
+            self.UI.user_input(
+                feature_3_settings_name,
+                enums.UserInputTypes.OBJECT,
+                None,
                 inputs,
-                min_val=2,
-                max_val=5,
-                title="Feature Count",
+                title="Feature 3",
                 parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Number of features to use for ML predictions."
-                },
-            ),
-            f1_string=self.UI.user_input(
-                "f1_string",
-                enums.UserInputTypes.STRING,
-                title="Feature 1",
-                def_val="RSI",
-                options=["RSI", "WT", "CCI", "ADX"],
-                other_schema_values={
-                    "description": "The first feature to use for ML predictions."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f1_paramA=self.UI.user_input(
-                "f1_paramA",
-                enums.UserInputTypes.INT,
-                title="Parameter A",
-                def_val=14,
-                other_schema_values={
-                    "description": "The primary parameter of feature 1."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f1_paramB=self.UI.user_input(
-                "f1_paramB",
-                enums.UserInputTypes.INT,
-                title="Parameter B",
-                def_val=1,
-                other_schema_values={
-                    "description": "The secondary parameter of feature 2 (if applicable)."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f2_string=self.UI.user_input(
-                "f2_string",
-                enums.UserInputTypes.OPTIONS,
-                title="Feature 2",
-                def_val="WT",
-                options=["RSI", "WT", "CCI", "ADX"],
-                other_schema_values={
-                    "description": "The second feature to use for ML predictions."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f2_paramA=self.UI.user_input(
-                "f2_paramA",
-                enums.UserInputTypes.INT,
-                title="Parameter A",
-                def_val=10,
-                other_schema_values={
-                    "description": "The primary parameter of feature 2."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f2_paramB=self.UI.user_input(
-                "f2_paramB",
-                enums.UserInputTypes.INT,
-                title="Parameter B",
-                def_val=11,
-                other_schema_values={
-                    "description": "The secondary parameter of feature 2 (if applicable)."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f3_string=self.UI.user_input(
+            )
+            f3_string = self.UI.user_input(
                 "f3_string",
                 enums.UserInputTypes.OPTIONS,
                 title="Feature 3",
                 def_val="CCI",
+                registered_inputs=inputs,
                 options=["RSI", "WT", "CCI", "ADX"],
                 other_schema_values={
                     "description": "The third feature to use for ML predictions."
                 },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f3_paramA=self.UI.user_input(
+                parent_input_name=feature_3_settings_name,
+            )
+            f3_paramA = self.UI.user_input(
                 "f3_paramA",
                 enums.UserInputTypes.INT,
                 title="Parameter A",
                 def_val=20,
-                tooother_schema_values={
+                registered_inputs=inputs,
+                other_schema_values={
                     "description": "The primary parameter of feature 3."
                 },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f3_paramB=self.UI.user_input(
+                parent_input_name=feature_3_settings_name,
+            )
+            f3_paramB = self.UI.user_input(
                 "f3_paramB",
                 enums.UserInputTypes.INT,
                 title="Parameter B",
                 def_val=1,
+                registered_inputs=inputs,
                 other_schema_values={
                     "description": "The secondary parameter of feature 3 (if applicable)."
                 },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f4_string=self.UI.user_input(
-                "f4_string",
-                enums.UserInputTypes.OPTIONS,
-                title="Feature 4",
-                def_val="ADX",
-                options=["RSI", "WT", "CCI", "ADX"],
-                other_schema_values={
-                    "description": "The fourth feature to use for ML predictions."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f4_paramA=self.UI.user_input(
-                "f4_paramA",
-                enums.UserInputTypes.INT,
-                title="Parameter A",
-                def_val=20,
-                other_schema_values={
-                    "description": "The primary parameter of feature 4."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f4_paramB=self.UI.user_input(
-                "f4_paramB",
-                enums.UserInputTypes.INT,
-                title="Parameter B",
-                def_val=2,
-                other_schema_values={
-                    "description": "The secondary parameter of feature 4 (if applicable)."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f5_string=self.UI.user_input(
-                "f5_string",
-                enums.UserInputTypes.OPTIONS,
-                title="Feature 5",
-                def_val="RSI",
-                options=["RSI", "WT", "CCI", "ADX"],
-                other_schema_values={
-                    "description": "The fifth feature to use for ML predictions."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f5_paramA=self.UI.user_input(
-                "f5_paramA",
-                enums.UserInputTypes.INT,
-                title="Parameter A",
-                def_val=9,
-                other_schema_values={
-                    "description": "The primary parameter of feature 5."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
-            f5_paramB=self.UI.user_input(
-                "f5_paramB",
-                enums.UserInputTypes.INT,
-                title="Parameter B",
-                def_val=1,
-                other_schema_values={
-                    "description": "The secondary parameter of feature 5 (if applicable)."
-                },
-                parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
-            ),
+                parent_input_name=feature_3_settings_name,
+            )
+            if feature_count > 3:
+                feature_4_settings_name = "feature_4_settings"
+                self.UI.user_input(
+                    feature_4_settings_name,
+                    enums.UserInputTypes.OBJECT,
+                    None,
+                    inputs,
+                    title="Feature 4",
+                    parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
+                )
+
+                f4_string = self.UI.user_input(
+                    "f4_string",
+                    enums.UserInputTypes.OPTIONS,
+                    title="Feature 4",
+                    def_val="ADX",
+                    registered_inputs=inputs,
+                    options=["RSI", "WT", "CCI", "ADX"],
+                    other_schema_values={
+                        "description": "The fourth feature to use for ML predictions."
+                    },
+                    parent_input_name=feature_4_settings_name,
+                )
+                f4_paramA = self.UI.user_input(
+                    "f4_paramA",
+                    enums.UserInputTypes.INT,
+                    title="Parameter A",
+                    def_val=20,
+                    registered_inputs=inputs,
+                    other_schema_values={
+                        "description": "The primary parameter of feature 4."
+                    },
+                    parent_input_name=feature_4_settings_name,
+                )
+                f4_paramB = self.UI.user_input(
+                    "f4_paramB",
+                    enums.UserInputTypes.INT,
+                    title="Parameter B",
+                    def_val=2,
+                    registered_inputs=inputs,
+                    other_schema_values={
+                        "description": "The secondary parameter of feature 4 (if applicable)."
+                    },
+                    parent_input_name=feature_4_settings_name,
+                )
+                if feature_count > 4:
+                    feature_5_settings_name = "feature_5_settings"
+                    self.UI.user_input(
+                        feature_5_settings_name,
+                        enums.UserInputTypes.OBJECT,
+                        None,
+                        inputs,
+                        title="Feature 5",
+                        parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
+                    )
+
+                    f5_string = self.UI.user_input(
+                        "f5_string",
+                        enums.UserInputTypes.OPTIONS,
+                        title="Feature 5",
+                        def_val="RSI",
+                        registered_inputs=inputs,
+                        options=["RSI", "WT", "CCI", "ADX"],
+                        other_schema_values={
+                            "description": "The fifth feature to use for ML predictions."
+                        },
+                        parent_input_name=feature_5_settings_name,
+                    )
+                    f5_paramA = self.UI.user_input(
+                        "f5_paramA",
+                        enums.UserInputTypes.INT,
+                        title="Parameter A",
+                        def_val=9,
+                        registered_inputs=inputs,
+                        other_schema_values={
+                            "description": "The primary parameter of feature 5."
+                        },
+                        parent_input_name=feature_5_settings_name,
+                    )
+                    f5_paramB = self.UI.user_input(
+                        "f5_paramB",
+                        enums.UserInputTypes.INT,
+                        title="Parameter B",
+                        def_val=1,
+                        registered_inputs=inputs,
+                        other_schema_values={
+                            "description": "The secondary parameter of feature 5 (if applicable)."
+                        },
+                        parent_input_name=feature_5_settings_name,
+                    )
+        self.feature_engineering_settings = utils.FeatureEngineeringSettings(
+            feature_count=feature_count,
+            f1_string=f1_string,
+            f1_paramA=f1_paramA,
+            f1_paramB=f1_paramB,
+            f2_string=f2_string,
+            f2_paramA=f2_paramA,
+            f2_paramB=f2_paramB,
+            f3_string=f3_string,
+            f3_paramA=f3_paramA,
+            f3_paramB=f3_paramB,
+            f4_string=f4_string,
+            f4_paramA=f4_paramA,
+            f4_paramB=f4_paramB,
+            f5_string=f5_string,
+            f5_paramA=f5_paramA,
+            f5_paramB=f5_paramB,
         )
 
     def _init_display_settings(self, inputs: dict) -> None:
@@ -561,8 +645,8 @@ class LorentzianClassification(evaluators.TAEvaluator):
                     "may result in more ML entry signals being generated."
                 },
             ),
-            h=self.UI.user_input(
-                "h",
+            lookback_window=self.UI.user_input(
+                "lookback_window",
                 enums.UserInputTypes.INT,
                 8,
                 inputs,
@@ -576,8 +660,8 @@ class LorentzianClassification(evaluators.TAEvaluator):
                     "Recommended range: 3-50"
                 },
             ),
-            r=self.UI.user_input(
-                "r",
+            relative_weighting=self.UI.user_input(
+                "relative_weighting",
                 enums.UserInputTypes.FLOAT,
                 8,
                 inputs,
@@ -593,8 +677,8 @@ class LorentzianClassification(evaluators.TAEvaluator):
                     "Gaussian kernel. Recommended range: 0.25-25"
                 },
             ),
-            x=self.UI.user_input(
-                "x",
+            regression_level=self.UI.user_input(
+                "regression_level",
                 enums.UserInputTypes.INT,
                 25,
                 inputs,
@@ -756,7 +840,6 @@ class LorentzianClassification(evaluators.TAEvaluator):
         cryptocurrency,
         symbol,
         time_frame,
-        candle_data,
         candle,
         inc_in_construction_data,
         exchange,
@@ -770,7 +853,6 @@ class LorentzianClassification(evaluators.TAEvaluator):
             candles_ohlc4,
             user_selected_candles,
         ) = self._get_candle_data(
-            self,
             candle_source_name=self.general_settings.source,
             exchange=exchange,
             exchange_id=exchange_id,
@@ -779,162 +861,39 @@ class LorentzianClassification(evaluators.TAEvaluator):
             inc_in_construction_data=inc_in_construction_data,
         )
         data_length = len(candle_highs)
-
-        # Filter object for filtering the ML predictions
-        filter = utils.Filter(
-            ml_extensions.filter_volatility(
-                1, 10, self.filter_settings.use_volatility_filter
-            ),
-            ml_extensions.regime_filter(
-                candles_ohlc4,
-                self.filter_settings.regime_threshold,
-                self.filter_settings.use_regime_filter,
-            ),
-            ml_extensions.filter_adx(
-                user_selected_candles,
-                14,
-                self.filter_settings.adx_threshold,
-                self.filter_settings.use_adx_filter,
-            ),
-        )
-
-        # c_green = color.new(#009988, 20)
-        # c_red = color.new(#CC3311, 20)
-        # transparent = color.new(#000000, 100)
-        yhat1: numpy.array = kernels.rationalQuadratic(
+        _filters: utils.Filter = self._get_filters(
+            candle_closes,
+            data_length,
+            candles_ohlc4,
+            candle_highs,
+            candle_lows,
             user_selected_candles,
-            self.kernel_settings.h,
-            self.kernel_settings.r,
-            self.kernel_settings.x,
-        )
-        yhat2: numpy.array = kernels.gaussian(
-            user_selected_candles,
-            self.kernel_settings.h - self.kernel_settings.lag,
-            self.kernel_settings.x,
-        )
-        yhat1, yhat2 = cut_data_to_same_len((yhat1, yhat2))
-
-        kernelEstimate: numpy.array = yhat1
-        # Kernel Rates of Change
-        # shift and cut data for numpy
-        yhat1_cutted_1, yhat1_shifted_1 = utils.shift_data(yhat1, 1)
-        yhat1_cutted_2, yhat1_shifted_2 = utils.shift_data(yhat1_shifted_1, 1)
-        was_bearish_rates: numpy.array = yhat1_shifted_2 > yhat1_cutted_2
-        was_bullish_rates: numpy.array = yhat1_shifted_2 < yhat1_cutted_2
-        is_bearish_rates: numpy.array = yhat1_shifted_1 > yhat1_cutted_1
-        is_bullish_rates: numpy.array = yhat1_shifted_1 < yhat1_cutted_1
-        is_bearish_changes: numpy.array = numpy.logical_and(
-            is_bearish_rates, was_bullish_rates
-        )
-        is_bullish_changes: numpy.array = numpy.logical_and(
-            is_bullish_rates, was_bearish_rates
-        )
-        # Kernel Crossovers
-        is_bullish_cross_alerts, is_bearish_cross_alerts = utils.get_is_crossing_data(
-            yhat2, yhat1
-        )
-        is_bullish_smooths: numpy.array = yhat2 >= yhat1
-        is_bearish_smooths: numpy.array = yhat2 <= yhat1
-
-        # # Kernel Colors
-        # # color colorByCross = isBullishSmooth ? c_green : c_red
-        # # color colorByRate = isBullishRate ? c_green : c_red
-        # # color plotColor = showKernelEstimate ? (useKernelSmoothing ? colorByCross : colorByRate) : transparent
-        # # plot(kernelEstimate, color=plotColor, linewidth=2, title="Kernel Regression Estimate")
-        # # Alert Variables
-        alerts_bullish = (
-            is_bullish_cross_alerts
-            if self.kernel_settings.use_kernel_smoothing
-            else is_bullish_changes
-        )
-        alerts_bearish = (
-            is_bearish_cross_alerts
-            if self.kernel_settings.use_kernel_smoothing
-            else is_bearish_changes
-        )
-        # Bullish and Bearish Filters based on Kernel
-        is_bullishs: numpy.array = (
-            (
-                is_bullish_smooths
-                if self.kernel_settings.use_kernel_smoothing
-                else is_bullish_rates
-            )
-            if self.kernel_settings.use_kernel_filter
-            else [True] * data_length
-        )
-        is_bearishs: numpy.array = (
-            (
-                is_bearish_smooths
-                if self.kernel_settings.use_kernel_smoothing
-                else is_bearish_rates
-            )
-            if self.kernel_settings.use_kernel_filter
-            else [True] * data_length
         )
 
-        feature_arrays = utils.FeatureArrays(
-            f1=utils.series_from(
-                self.feature_engineering_settings.f1_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.feature_engineering_settings.f1_paramA,
-                self.feature_engineering_settings.f1_paramB,
-            ),
-            f2=utils.series_from(
-                self.feature_engineering_settings.f2_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.feature_engineering_settings.f2_paramA,
-                self.feature_engineering_settings.f2_paramB,
-            ),
-            f3=utils.series_from(
-                self.feature_engineering_settings.f3_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.feature_engineering_settings.f3_paramA,
-                self.feature_engineering_settings.f3_paramB,
-            ),
-            f4=utils.series_from(
-                self.feature_engineering_settings.f4_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.feature_engineering_settings.f4_paramA,
-                self.feature_engineering_settings.f4_paramB,
-            ),
-            f5=utils.series_from(
-                self.feature_engineering_settings.f5_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.feature_engineering_settings.f5_paramA,
-                self.feature_engineering_settings.f5_paramB,
-            ),
-        )
         (
-            is_ema_uptrend,
-            is_ema_downtrend,
-            is_sma_uptrend,
-            is_sma_downtrend,
-        ) = self.get_filters(candle_closes, data_length)
+            alerts_bullish,
+            alerts_bearish,
+            is_bullishs,
+            is_bearishs,
+            is_bearish_changes,
+            is_bullish_changes,
+        ) = self.get_kernel_data(user_selected_candles, data_length)
+
+        feature_arrays: utils.FeatureArrays = self.get_feature_arrays(
+            candle_closes=candle_closes,
+            candle_highs=candle_highs,
+            candle_lows=candle_lows,
+            candles_hlc3=candles_hlc3,
+        )
 
         y_train_series = self.get_y_train_series(user_selected_candles)
 
-        # cut all data to same length for numpy and loop indizies being align
+        # cut all historical data to same length for numpy and loop indizies being aligned
         (
             y_train_series,
-            is_ema_uptrend,
-            is_ema_downtrend,
-            is_sma_uptrend,
-            is_sma_downtrend,
+            _filters.filter_all,
+            _filters.is_uptrend,
+            _filters.is_downtrend,
             candle_closes,
             candle_highs,
             candle_lows,
@@ -947,13 +906,14 @@ class LorentzianClassification(evaluators.TAEvaluator):
             feature_arrays.f5,
             is_bullishs,
             is_bearishs,
+            alerts_bullish,
+            alerts_bearish,
         ) = cut_data_to_same_len(
             (
                 y_train_series,
-                is_ema_uptrend,
-                is_ema_downtrend,
-                is_sma_uptrend,
-                is_sma_downtrend,
+                _filters.filter_all,
+                _filters.is_uptrend,
+                _filters.is_downtrend,
                 candle_closes,
                 candle_highs,
                 candle_lows,
@@ -966,14 +926,12 @@ class LorentzianClassification(evaluators.TAEvaluator):
                 feature_arrays.f5,
                 is_bullishs,
                 is_bearishs,
+                alerts_bullish,
+                alerts_bearish,
             )
         )
         cutted_data_length = len(candle_closes)
-        max_bars_back_index = (
-            cutted_data_length - self.settings.max_bars_back
-            if cutted_data_length >= self.settings.max_bars_back
-            else cutted_data_length
-        )
+        max_bars_back_index = self.get_max_bars_back_index(cutted_data_length)
 
         # =================================
         # ==== Next Bar Classification ====
@@ -1093,16 +1051,13 @@ class LorentzianClassification(evaluators.TAEvaluator):
             # ==== Prediction Filters ====
             # ============================
 
-            # User Defined Filters: Used for adjusting the frequency of the ML Model's predictions
-            filter_all = filter.volatility and filter.regime and filter.adx
-
             # Filtered Signal: The model's prediction of future price movement direction with user-defined filters applied
             signal = (
                 utils.SignalDirection.long
-                if prediction > 0 and filter_all
+                if prediction > 0 and _filters.filter_all[candle_index]
                 else (
                     utils.SignalDirection.short
-                    if prediction < 0 and filter_all
+                    if prediction < 0 and _filters.filter_all[candle_index]
                     else previous_signals
                 )
             )
@@ -1121,23 +1076,19 @@ class LorentzianClassification(evaluators.TAEvaluator):
             )
             is_buy_signal = (
                 signal == utils.SignalDirection.long
-                and is_ema_uptrend
-                and is_sma_uptrend
+                and _filters.is_uptrend[candle_index]
             )
             is_sell_signal = (
                 signal == utils.SignalDirection.short
-                and is_ema_downtrend
-                and is_sma_downtrend
+                and _filters.is_downtrend[candle_index]
             )
             is_last_signal_buy = (
                 signal[-5] == utils.SignalDirection.long
-                and is_ema_uptrend[-5]
-                and is_sma_uptrend[-5]
+                and _filters.is_uptrend[candle_index - 4]
             )
             is_last_signal_sell = (
                 signal[-5] == utils.SignalDirection.short
-                and is_ema_downtrend[-5]
-                and is_sma_downtrend[-5]
+                and _filters.is_downtrend[candle_index - 4]
             )
             is_new_buy_signal = is_buy_signal and is_different_signal_type
             is_new_sell_signal = is_sell_signal and is_different_signal_type
@@ -1150,8 +1101,7 @@ class LorentzianClassification(evaluators.TAEvaluator):
             start_long_trade = (
                 is_new_buy_signal
                 and is_bullishs[candle_index]
-                and is_ema_uptrend[candle_index]
-                and is_sma_uptrend[candle_index]
+                and _filters.is_uptrend[candle_index]
             )
             start_long_trades.append(start_long_trade)
             if start_long_trade:
@@ -1161,8 +1111,7 @@ class LorentzianClassification(evaluators.TAEvaluator):
             start_short_trade = (
                 is_new_sell_signal
                 and is_bearishs[candle_index]
-                and is_ema_downtrend[candle_index]
-                and is_sma_downtrend[candle_index]
+                and _filters.is_downtrend[candle_index]
             )
             start_short_trades.append(start_short_trade)
             if start_short_trade:
@@ -1416,26 +1365,186 @@ class LorentzianClassification(evaluators.TAEvaluator):
                 )
             )
 
-    def _get_base_data(
+    def _get_filters(
         self,
-        exchange,
-        exchange_id,
-        symbol,
-        time_frame,
-        inc_in_construction_data,
-    ):
-        pass
+        candle_closes,
+        data_length,
+        candles_ohlc4,
+        candle_highs,
+        candle_lows,
+        user_selected_candles,
+    ) -> utils.Filter:
 
-        return (
-            filter,
-            feature_arrays,
-            max_bars_back_index,
+        # Filter object for filtering the ML predictions
+        (
             is_ema_uptrend,
             is_ema_downtrend,
             is_sma_uptrend,
             is_sma_downtrend,
+        ) = self.get_filters(candle_closes, data_length)
+        _filter: utils.Filter = utils.Filter(
+            volatility=ml_extensions.filter_volatility(
+                candle_highs=candle_highs,
+                candle_lows=candle_lows,
+                candle_closes=candle_closes,
+                min_length=1,
+                max_length=10,
+                use_volatility_filter=self.filter_settings.use_volatility_filter,
+            ),
+            regime=ml_extensions.regime_filter(
+                ohlc4=candles_ohlc4,
+                highs=candle_highs,
+                lows=candle_lows,
+                threshold=self.filter_settings.regime_threshold,
+                use_regime_filter=self.filter_settings.use_regime_filter,
+            ),
+            adx=ml_extensions.filter_adx(
+                candle_closes=user_selected_candles,
+                candle_highs=candle_highs,
+                candle_lows=candle_lows,
+                length=14,
+                adx_threshold=self.filter_settings.adx_threshold,
+                use_adx_filter=self.filter_settings.use_adx_filter,
+            ),
+            is_ema_uptrend=is_ema_uptrend,
+            is_ema_downtrend=is_ema_downtrend,
+            is_sma_uptrend=is_sma_uptrend,
+            is_sma_downtrend=is_sma_downtrend,
+        )
+        return _filter
+
+    def get_feature_arrays(
+        self, candle_closes, candle_highs, candle_lows, candles_hlc3
+    ) -> utils.FeatureArrays:
+        return utils.FeatureArrays(
+            f1=utils.series_from(
+                self.feature_engineering_settings.f1_string,
+                candle_closes,
+                candle_highs,
+                candle_lows,
+                candles_hlc3,
+                self.feature_engineering_settings.f1_paramA,
+                self.feature_engineering_settings.f1_paramB,
+            ),
+            f2=utils.series_from(
+                self.feature_engineering_settings.f2_string,
+                candle_closes,
+                candle_highs,
+                candle_lows,
+                candles_hlc3,
+                self.feature_engineering_settings.f2_paramA,
+                self.feature_engineering_settings.f2_paramB,
+            ),
+            f3=utils.series_from(
+                self.feature_engineering_settings.f3_string,
+                candle_closes,
+                candle_highs,
+                candle_lows,
+                candles_hlc3,
+                self.feature_engineering_settings.f3_paramA,
+                self.feature_engineering_settings.f3_paramB,
+            ),
+            f4=utils.series_from(
+                self.feature_engineering_settings.f4_string,
+                candle_closes,
+                candle_highs,
+                candle_lows,
+                candles_hlc3,
+                self.feature_engineering_settings.f4_paramA,
+                self.feature_engineering_settings.f4_paramB,
+            ),
+            f5=utils.series_from(
+                self.feature_engineering_settings.f5_string,
+                candle_closes,
+                candle_highs,
+                candle_lows,
+                candles_hlc3,
+                self.feature_engineering_settings.f5_paramA,
+                self.feature_engineering_settings.f5_paramB,
+            ),
+        )
+
+    def get_kernel_data(self, user_selected_candles, data_length: int) -> tuple:
+        # c_green = color.new(#009988, 20)
+        # c_red = color.new(#CC3311, 20)
+        # transparent = color.new(#000000, 100)
+        yhat1: numpy.array = kernel.rationalQuadratic(
             user_selected_candles,
-            data_length,
+            self.kernel_settings.lookback_window,
+            self.kernel_settings.relative_weighting,
+            self.kernel_settings.regression_level,
+        )
+        yhat2: numpy.array = kernel.gaussian(
+            user_selected_candles,
+            self.kernel_settings.lookback_window - self.kernel_settings.lag,
+            self.kernel_settings.regression_level,
+        )
+        yhat1, yhat2 = cut_data_to_same_len((yhat1, yhat2))
+
+        kernelEstimate: numpy.array = yhat1
+        # Kernel Rates of Change
+        # shift and cut data for numpy
+        yhat1_cutted_1, yhat1_shifted_1 = utils.shift_data(yhat1, 1)
+        yhat1_cutted_2, yhat1_shifted_2 = utils.shift_data(yhat1_shifted_1, 1)
+        was_bearish_rates: numpy.array = yhat1_shifted_2 > yhat1_cutted_2
+        was_bullish_rates: numpy.array = yhat1_shifted_2 < yhat1_cutted_2
+        is_bearish_rates: numpy.array = yhat1_shifted_1 > yhat1_cutted_1
+        is_bullish_rates: numpy.array = yhat1_shifted_1 < yhat1_cutted_1
+        is_bearish_changes: numpy.array = numpy.logical_and(
+            is_bearish_rates, was_bullish_rates
+        )
+        is_bullish_changes: numpy.array = numpy.logical_and(
+            is_bullish_rates, was_bearish_rates
+        )
+        # Kernel Crossovers
+        is_bullish_cross_alerts, is_bearish_cross_alerts = utils.get_is_crossing_data(
+            yhat2, yhat1
+        )
+        is_bullish_smooths: numpy.array = yhat2 >= yhat1
+        is_bearish_smooths: numpy.array = yhat2 <= yhat1
+
+        # # Kernel Colors
+        # # color colorByCross = isBullishSmooth ? c_green : c_red
+        # # color colorByRate = isBullishRate ? c_green : c_red
+        # # color plotColor = showKernelEstimate ? (useKernelSmoothing ? colorByCross : colorByRate) : transparent
+        # # plot(kernelEstimate, color=plotColor, linewidth=2, title="Kernel Regression Estimate")
+        # # Alert Variables
+        alerts_bullish = (
+            is_bullish_cross_alerts
+            if self.kernel_settings.use_kernel_smoothing
+            else is_bullish_changes
+        )
+        alerts_bearish = (
+            is_bearish_cross_alerts
+            if self.kernel_settings.use_kernel_smoothing
+            else is_bearish_changes
+        )
+        # Bullish and Bearish Filters based on Kernel
+        is_bullishs: numpy.array = (
+            (
+                is_bullish_smooths
+                if self.kernel_settings.use_kernel_smoothing
+                else is_bullish_rates
+            )
+            if self.kernel_settings.use_kernel_filter
+            else [True] * data_length
+        )
+        is_bearishs: numpy.array = (
+            (
+                is_bearish_smooths
+                if self.kernel_settings.use_kernel_smoothing
+                else is_bearish_rates
+            )
+            if self.kernel_settings.use_kernel_filter
+            else [True] * data_length
+        )
+        return (
+            alerts_bullish,
+            alerts_bearish,
+            is_bullishs,
+            is_bearishs,
+            is_bearish_changes,
+            is_bullish_changes,
         )
 
     def _get_candle_data(
@@ -1503,3 +1612,10 @@ class LorentzianClassification(evaluators.TAEvaluator):
             candles_ohlc4,
             user_selected_candles,
         )
+
+    def get_max_bars_back_index(self, cutted_data_length) -> int:
+        if cutted_data_length >= self.general_settings.max_bars_back:
+            return cutted_data_length - self.general_settings.max_bars_back
+        else:
+            # todo logger warning
+            return cutted_data_length
