@@ -3,17 +3,23 @@ import typing
 import numpy
 import tulipy
 import numpy.typing as npt
-import tentacles.Evaluator.TA.lorentzian_classification.utils as utils
+import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utils
 
 
 def rescale(
-    src: numpy.array, oldMin: float, oldMax: float, newMin: float, newMax: float
+    src, oldMin: float, oldMax: float, newMin: float, newMax: float
 ):
     return newMin + (newMax - newMin) * (src - oldMin) / max(oldMax - oldMin, 10e-10)
 
 
-def normalize(src: numpy.array, _min: float, _max: float):
+def normalize(src, 
+            #   _min: float, _max: float
+              ):
+    # normalizes to values from 0 -1
+    min_val = numpy.min(src)
+    return (src - min_val) / (numpy.max(src) - min_val)
+
     return _min + (_max - _min) * (src - numpy.min(src)) / numpy.max(src)
 
 
@@ -24,14 +30,21 @@ def n_rsi(_close, f_paramA, f_paramB):
 def n_wt(_hlc3, f_paramA, f_paramB):
     ema1 = tulipy.ema(_hlc3, f_paramA)
     ema2 = tulipy.ema(abs(_hlc3 - ema1), f_paramA)
-    ci = (_hlc3 - ema1) / (0.015 * ema2)
+    ci = (_hlc3[1:] - ema1[1:]) / (0.015 * ema2[1:])
     wt1 = tulipy.ema(ci, f_paramB)  # tci
     wt2 = tulipy.sma(wt1, 4)
-    return normalize(wt1 - wt2, 0, 1)
+    wt1, wt2 = basic_utils.cut_data_to_same_len((wt1, wt2))
+    return normalize(wt1 - wt2) #, 0, 1)
 
 
-def n_cci(_close, f_paramA, f_paramB):
-    normalize(tulipy.ema(tulipy.cci(_close, f_paramA), f_paramB), 0, 1)
+def n_cci(
+    highs: npt.NDArray[numpy.float64],
+    lows: npt.NDArray[numpy.float64],
+    closes: npt.NDArray[numpy.float64],
+    f_paramA,
+    f_paramB,
+):
+    return normalize(tulipy.ema(tulipy.cci(closes, closes, closes, f_paramA), f_paramB))#, 0, 1)
 
 
 def n_adx(highSrc, lowSrc, closeSrc, f_paramA: int):
@@ -71,10 +84,13 @@ def n_adx(highSrc, lowSrc, closeSrc, f_paramA: int):
         )
         diPositive = smoothDirectionalMovementPlus[-1] / trSmooth[-1] * 100
         diNegative = smoothnegMovement[-1] / trSmooth[-1] * 100
-        dx.append(abs(diPositive - diNegative) / (diPositive + diNegative) * 100)
+        
+        if index > 3:
+            # skip early candles as its division by 0
+            dx.append(abs(diPositive - diNegative) / (diPositive + diNegative) * 100)
     dx = numpy.array(dx)
     adx = utils.calculate_rma(dx, length)
-    rescale(adx, 0, 100, 0, 1)
+    return rescale(adx, 0, 100, 0, 1)
 
 
 def regime_filter(
@@ -167,7 +183,9 @@ def filter_adx(
 
         di_positive = smooth_directional_movement_plus[-1] / tr_smooths[-1] * 100
         di_negative = smoothneg_movements[-1] / tr_smooths[-1] * 100
-        dx.append(abs(di_positive - di_negative) / (di_positive + di_negative) * 100)
+        if index > 3:
+            # skip early candles as its division by 0
+            dx.append(abs(di_positive - di_negative) / (di_positive + di_negative) * 100)
     dx: npt.NDArray[numpy.float64] = numpy.array(dx)
     adx: npt.NDArray[numpy.float64] = utils.calculate_rma(dx, length)
     return adx > adx_threshold
@@ -182,10 +200,10 @@ def filter_volatility(
     use_volatility_filter: bool = True,
 ) -> npt.NDArray[numpy.bool_]:
     if not use_volatility_filter:
-        return numpy.array([True] *  len(candle_closes))
+        return numpy.array([True] * len(candle_closes))
     recentAtr = tulipy.atr(candle_highs, candle_lows, candle_closes, min_length)
     historicalAtr = tulipy.atr(candle_highs, candle_lows, candle_closes, max_length)
     recentAtr, historicalAtr = basic_utils.cut_data_to_same_len(
         (recentAtr, historicalAtr)
     )
-    return recentAtr > historicalAtr
+    return recentAtr > historicalAtr, recentAtr, historicalAtr

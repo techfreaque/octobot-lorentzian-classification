@@ -3,7 +3,7 @@ import numpy.typing as npt
 
 import numpy
 import tulipy
-import tentacles.Evaluator.TA.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
+import tentacles.Trading.Mode.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utils
 
 
@@ -13,7 +13,7 @@ def series_from(feature_string, _close, _high, _low, _hlc3, f_paramA, f_paramB):
     if feature_string == "WT":
         return ml_extensions.n_wt(_hlc3, f_paramA, f_paramB)
     if feature_string == "CCI":
-        return ml_extensions.n_cci(_close, f_paramA, f_paramB)
+        return ml_extensions.n_cci(_high, _low, _close, f_paramA, f_paramB)
     if feature_string == "ADX":
         return ml_extensions.n_adx(_high, _low, _close, f_paramA)
 
@@ -227,7 +227,7 @@ class Filter:
 
 def shift_data(data_source: list or numpy.array, shift_by: int = 1):
     cutted_data = data_source[shift_by:]
-    shifted_data = data_source[: -shift_by - 1]
+    shifted_data = data_source[:-shift_by]
     return cutted_data, shifted_data
 
 
@@ -246,10 +246,13 @@ def get_is_crossing_data(
 
 
 def calculate_rma(src, length):
+    # TODO not the same as on here: https://www.tradingview.com/pine-script-reference/v5/#fun_ta%7Bdot%7Drma
     alpha = 1 / length
-    sma: npt.NDArray[numpy.float64] = tulipy.sma(src, length)
+    sma = tulipy.sma(src, length)[25:]  # cut first data as its not very accurate
     src, sma = basic_utils.cut_data_to_same_len((src, sma))
     rma: typing.List[float] = [0]
     for index in range(1, len(src)):
-        rma.append(sma[index] if rma[-1] else alpha * src + (1 - alpha) * rma[-1])
+        rma.append(
+            sma[index] if rma[-1] else (alpha * src[index]) + ((1 - alpha) * rma[-1])
+        )
     return numpy.array(rma)

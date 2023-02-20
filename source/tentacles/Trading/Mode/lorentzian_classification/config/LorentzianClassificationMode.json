@@ -1,0 +1,8 @@
+{
+    "default_config": [
+        "TimeFrameStrategyEvaluator"
+    ],
+    "required_strategies": [
+        "TimeFrameStrategyEvaluator"
+    ]
+}

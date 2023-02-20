@@ -1,0 +1,2 @@
+class MaximumOpenPositionReachedError(Exception):
+    pass
