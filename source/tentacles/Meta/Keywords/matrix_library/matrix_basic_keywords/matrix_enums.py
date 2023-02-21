@@ -17,6 +17,8 @@ CURRENT_TIME_FRAME = "current time frame"
 
 class TradingModeCommands:
     EXECUTE = "execute"
+    ACTIVATE_REALTIME_STRATEGY = "activate_realtime_strategy"
+    DISABLE_REALTIME_STRATEGY = "disable_realtime_strategy"
     SAVE = "save"
     INIT_CALL = "init_call"
     OHLC_CALLBACK = "ohlc_callback"

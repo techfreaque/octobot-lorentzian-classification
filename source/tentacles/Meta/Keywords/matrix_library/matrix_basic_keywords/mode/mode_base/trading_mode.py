@@ -1,17 +1,17 @@
 import time
 import octobot_trading.util as util
 import octobot_commons.enums as commons_enums
-import octobot_services.interfaces as interfaces
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords.context_management as context_management
 import octobot_trading.modes.script_keywords.basic_keywords.user_inputs as user_inputs
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.matrix_enums as matrix_enums
-from tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_mode_base import AbstractBaseModeProducer
+from tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_mode_base import (
+    AbstractBaseModeProducer,
+)
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as utilities
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.user_inputs2.select_time_frame as select_time_frame
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
-
 
 
 class MatrixModeProducer(AbstractBaseModeProducer):
@@ -48,6 +48,7 @@ class MatrixModeProducer(AbstractBaseModeProducer):
 
     enable_plot: bool = True
     plot_signals: bool = False
+    enable_ping_pong: bool = None
 
     # todo remove
     live_recording_mode: bool = None
@@ -58,7 +59,6 @@ class MatrixModeProducer(AbstractBaseModeProducer):
         self.candles_manager: dict = {}
         self.ctx: context_management.Context = None
         self.candles: dict = {}
-
 
     async def _register_and_apply_required_user_inputs(self, context):
         if self.trading_mode.ALLOW_CUSTOM_TRIGGER_SOURCE:

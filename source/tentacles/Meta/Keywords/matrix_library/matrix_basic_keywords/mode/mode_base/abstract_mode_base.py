@@ -16,21 +16,22 @@
 import time
 import importlib
 
+import async_channel.constants as channel_constants
 import octobot_commons.logging as logging
 import octobot_commons.enums as commons_enums
 import octobot_commons.errors as commons_errors
 import octobot_commons.constants as commons_constants
 import octobot_commons.databases as databases
-from octobot_trading.modes.script_keywords import basic_keywords
+import octobot_trading.constants as trading_constants
+import octobot_trading.errors as errors
 import octobot_trading.modes.script_keywords.context_management as context_management
 import octobot_trading.modes.modes_util as modes_util
-import octobot_trading.errors as errors
-import octobot_tentacles_manager.api as tentacles_manager_api
-import octobot_trading.modes.scripted_trading_mode.abstract_scripted_trading_mode as abstract_scripted_trading_mode
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.matrix_enums as matrix_enums
-import async_channel.constants as channel_constants
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.exchange_channel as exchanges_channel
+import octobot_tentacles_manager.api as tentacles_manager_api
+import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
+import octobot_trading.modes.scripted_trading_mode.abstract_scripted_trading_mode as abstract_scripted_trading_mode
+import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.matrix_enums as matrix_enums
 
 try:
     import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
@@ -38,6 +39,11 @@ try:
 except (ImportError, ModuleNotFoundError):
     simple_ping_pong = None
     ping_pong_storage_management = None
+
+# try:
+
+# except (ImportError, ModuleNotFoundError):
+# execute_real_time_strategy = None
 PING_PONG_STORAGE_LOADING_TIMEOUT = 1000
 
 
@@ -45,13 +51,17 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
 
     AVAILABLE_API_ACTIONS = [matrix_enums.TradingModeCommands.EXECUTE]
 
-    last_calls_by_bot_id_and_time_frame: dict = {}
+    last_calls_by_exchange_id_and_time_frame: dict = {}
     ALLOW_CUSTOM_TRIGGER_SOURCE = True
     if ping_pong_storage_management:
         ping_pong_storage: ping_pong_storage_management.PingPongStorage = None
     else:
         ping_pong_storage = None
     INITIALIZED_TRADING_PAIR_BY_BOT_ID = {}
+
+    enable_ping_pong: bool = None
+    enable_real_time_strategy: bool = None
+    real_time_strategy_data = None
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -78,11 +88,17 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
         # on RELOAD_CONFIG command
         self.logger.debug(f"Received {action} command")
         if action == matrix_enums.TradingModeCommands.EXECUTE:
-            self.logger.debug(
-                f"Triggering trading mode from {action} command with data: {data}"
-            )
             await self._manual_trigger(data)
-        if action == commons_enums.UserCommands.RELOAD_CONFIG.value:
+            self.logger.debug(
+                f"Triggered trading mode from {action} command with data: {data}"
+            )
+        elif action == matrix_enums.TradingModeCommands.ACTIVATE_REALTIME_STRATEGY:
+            self.activate_realtime_strategy()
+            self.logger.info("Real time strategy activated")
+        elif action == matrix_enums.TradingModeCommands.DISABLE_REALTIME_STRATEGY:
+            self.disable_realtime_strategy()
+            self.logger.info("Real time strategy disabled")
+        elif action == commons_enums.UserCommands.RELOAD_CONFIG.value:
             # also reload script on RELOAD_CONFIG
             self.logger.debug("Reloaded configuration")
             await self.reload_scripts()
@@ -93,10 +109,16 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
         elif action == commons_enums.UserCommands.CLEAR_SIMULATED_ORDERS_CACHE.value:
             await modes_util.clear_simulated_orders_cache(self)
 
+    def disable_realtime_strategy(self):
+        self.real_time_strategy_data.disable_strategies()
+
+    def activate_realtime_strategy(self):
+        self.real_time_strategy_data.activate_strategy()
+
     async def _manual_trigger(self, trigger_data):
         for producer in self.producers:
-            for call_args_by_symbols in self.last_calls_by_bot_id_and_time_frame[
-                self.exchange_manager.bot_id
+            for call_args_by_symbols in self.last_calls_by_exchange_id_and_time_frame[
+                self.exchange_manager.id
             ].values():
                 if self.symbol in call_args_by_symbols:
                     await producer.call_script(
@@ -105,7 +127,7 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                     )
                 else:
                     self.logger.debug(
-                        "Wont't call script as last_calls_by_bot_id_and_time_frame "
+                        "Wont't call script as last_calls_by_exchange_id_and_time_frame "
                         f"is not initialized for {self.symbol}."
                     )
 
@@ -138,8 +160,8 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
             for (
                 time_frame,
                 call_args_by_symbols,
-            ) in self.last_calls_by_bot_id_and_time_frame[
-                self.exchange_manager.bot_id
+            ) in self.last_calls_by_exchange_id_and_time_frame[
+                self.exchange_manager.id
             ].items():
                 if self.symbol in call_args_by_symbols:
                     await producer.init_user_inputs(False)
@@ -155,9 +177,49 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                     await run_db.flush()
                 else:
                     self.logger.debug(
-                        "Wont't call script as last_calls_by_bot_id_and_time_frame "
+                        "Wont't call script as last_calls_by_exchange_id_and_time_frame "
                         f"is not initialized for {self.symbol}."
                     )
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        if simple_ping_pong:
+            self.enable_ping_pong = self.UI.user_input(
+                "enable_ping_pong",
+                commons_enums.UserInputTypes.BOOLEAN.value,
+                False,
+                registered_inputs=inputs,
+                title="Enable ping pong capabilities",
+                other_schema_values={
+                    "description": "requires a restart after enabling - required to use "
+                    "managed ping pong orders"
+                },
+                show_in_optimizer=False,
+                show_in_summary=False,
+                order=1000,
+            )
+        else:
+            self.enable_ping_pong = False
+        import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
+
+        if execute_real_time_strategy:
+            self.enable_real_time_strategy = self.UI.user_input(
+                "enable_real_time_strategy",
+                commons_enums.UserInputTypes.BOOLEAN.value,
+                False,
+                registered_inputs=inputs,
+                title="Enable real time strategy",
+                other_schema_values={
+                    "description": "requires a restart after enabling - define a "
+                    "strategy that is based on the real time price"
+                },
+                show_in_optimizer=False,
+                show_in_summary=False,
+                order=1000,
+            )
+            if self.real_time_strategy_data:
+                self.real_time_strategy_data.clear_strategies_cache()
+        else:
+            self.real_time_strategy = False
 
     async def create_consumers(self) -> list:
         """
@@ -165,7 +227,7 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
         :return: the list of consumers created
         """
         consumers = await super().create_consumers()
-        if simple_ping_pong:
+        if self.enable_ping_pong:
             consumers.append(
                 await exchanges_channel.get_chan(
                     trading_personal_data.OrdersChannel.get_name(),
@@ -177,7 +239,45 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                     else channel_constants.CHANNEL_WILDCARD,
                 )
             )
+        if self.enable_real_time_strategy:
+            import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
+
+            self.real_time_strategy_data: execute_real_time_strategy.RealTimeStrategies = (
+                execute_real_time_strategy.RealTimeStrategies()
+            )
+            if (
+                matrix_enums.TradingModeCommands.ACTIVATE_REALTIME_STRATEGY
+                not in self.AVAILABLE_API_ACTIONS
+            ):
+                self.AVAILABLE_API_ACTIONS = self.AVAILABLE_API_ACTIONS + [
+                    matrix_enums.TradingModeCommands.ACTIVATE_REALTIME_STRATEGY,
+                    matrix_enums.TradingModeCommands.DISABLE_REALTIME_STRATEGY,
+                ]
+            consumers.append(
+                await exchanges_channel.get_chan(
+                    trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id
+                ).new_consumer(
+                    self._mark_price_callback,
+                    symbol=self.symbol,
+                )
+            )
         return consumers
+
+    async def _mark_price_callback(
+        self,
+        exchange: str,
+        exchange_id: str,
+        cryptocurrency: str,
+        symbol: str,
+        mark_price,
+    ):
+        await self.real_time_strategy_data.run_real_time_strategies(
+            trading_mode=self,
+            exchange=exchange,
+            exchange_id=exchange_id,
+            symbol=symbol,
+            mark_price=mark_price,
+        )
 
     async def _order_callback(
         self, exchange, exchange_id, cryptocurrency, symbol, order, is_new, is_from_bot
@@ -400,24 +500,24 @@ class AbstractBaseModeProducer(
         kline,
     ):
         if (
-            self.exchange_manager.bot_id
-            not in self.trading_mode.last_calls_by_bot_id_and_time_frame
+            self.exchange_manager.id
+            not in self.trading_mode.last_calls_by_exchange_id_and_time_frame
         ):
-            self.trading_mode.last_calls_by_bot_id_and_time_frame[
-                self.exchange_manager.bot_id
+            self.trading_mode.last_calls_by_exchange_id_and_time_frame[
+                self.exchange_manager.id
             ] = {}
         if (
             time_frame
-            not in self.trading_mode.last_calls_by_bot_id_and_time_frame[
-                self.exchange_manager.bot_id
+            not in self.trading_mode.last_calls_by_exchange_id_and_time_frame[
+                self.exchange_manager.id
             ]
         ):
-            self.trading_mode.last_calls_by_bot_id_and_time_frame[
-                self.exchange_manager.bot_id
+            self.trading_mode.last_calls_by_exchange_id_and_time_frame[
+                self.exchange_manager.id
             ][time_frame] = {}
 
-        self.trading_mode.last_calls_by_bot_id_and_time_frame[
-            self.exchange_manager.bot_id
+        self.trading_mode.last_calls_by_exchange_id_and_time_frame[
+            self.exchange_manager.id
         ][time_frame][symbol] = (
             matrix_id,
             cryptocurrency,
@@ -433,17 +533,21 @@ class AbstractBaseModeProducer(
         await super().start()
         if not self.exchange_manager.is_backtesting and ping_pong_storage_management:
             try:
-                await ping_pong_storage_management.init_ping_pong_storage(self.exchange_manager)
+                await ping_pong_storage_management.init_ping_pong_storage(
+                    self.exchange_manager
+                )
             except Exception as error:
                 logging.get_logger(self.trading_mode.get_name()).exception(
                     error, True, f"Failed to restore ping pong storage - error: {error}"
                 )
+
 
 # TODO remove when stock octobot is fixed
 async def clear_plotting_cache(trading_mode):
     await basic_keywords.clear_symbol_plot_cache(
         databases.RunDatabasesProvider.instance().get_symbol_db(
             trading_mode.bot_id,
-            trading_mode.exchange_manager.exchange_name, trading_mode.symbol
+            trading_mode.exchange_manager.exchange_name,
+            trading_mode.symbol,
         )
     )

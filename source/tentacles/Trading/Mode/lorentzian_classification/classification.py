@@ -111,7 +111,9 @@ import tulipy
 import octobot_commons.enums as enums
 import octobot_evaluators.util as evaluators_util
 from octobot_trading.modes.script_keywords.context_management import Context
-from tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.plottings.plots import plot_conditional
+from tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.plottings.plots import (
+    plot_conditional,
+)
 from tentacles.Meta.Keywords.scripting_library.data.reading import exchange_public_data
 from tentacles.Meta.Keywords.scripting_library.data.writing import plotting
 from tentacles.Trading.Mode.lorentzian_classification.kernel_functions import kernel
@@ -267,7 +269,6 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                 "historicalAtr": historicalAtr,
             },
         )
-
         await plotting.plot(
             ctx,
             title="recentAtr",
@@ -610,7 +611,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         return is_ema_uptrend, is_ema_downtrend, is_sma_uptrend, is_sma_downtrend
 
     def get_y_train_series(self, user_selected_candles):
-        # TODO check if 4/-5 is same as on tradingview
+        # TODO check if 4/ is same as on tradingview
         cutted_candles, shifted_candles = utils.shift_data(user_selected_candles, 4)
         return numpy.where(
             shifted_candles < cutted_candles,

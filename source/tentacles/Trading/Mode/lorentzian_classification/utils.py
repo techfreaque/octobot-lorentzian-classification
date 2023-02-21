@@ -248,11 +248,11 @@ def get_is_crossing_data(
 def calculate_rma(src, length):
     # TODO not the same as on here: https://www.tradingview.com/pine-script-reference/v5/#fun_ta%7Bdot%7Drma
     alpha = 1 / length
-    sma = tulipy.sma(src, length)[25:]  # cut first data as its not very accurate
+    sma = tulipy.sma(src, length)[50:]  # cut first data as its not very accurate
     src, sma = basic_utils.cut_data_to_same_len((src, sma))
     rma: typing.List[float] = [0]
-    for index in range(1, len(src)):
+    for index in range(0, len(src)):
         rma.append(
-            sma[index] if rma[-1] else (alpha * src[index]) + ((1 - alpha) * rma[-1])
+            sma[index] if rma[-1] else (src[index] * alpha) + ((1 - alpha) * rma[-1])
         )
     return numpy.array(rma)
