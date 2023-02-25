@@ -1,4 +1,5 @@
 import time
+from octobot_services import interfaces
 import octobot_trading.util as util
 import octobot_commons.enums as commons_enums
 import octobot_trading.enums as trading_enums
@@ -16,9 +17,7 @@ import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotti
 
 class MatrixModeProducer(AbstractBaseModeProducer):
 
-    action = None
-    # TODO remove - find solution
-    INDICATOR_CLASS = None
+    action: str = None
 
     consumable_indicator_cache: dict = {}
     standalone_indicators: dict = {}
@@ -93,14 +92,13 @@ class MatrixModeProducer(AbstractBaseModeProducer):
     def disable_trading_if_just_started(self):
         if not self.exchange_manager.is_backtesting:
             running_seconds = time.time() - interfaces.get_bot_api().get_start_time()
-            if running_seconds < 25:
+            if running_seconds < 200:
                 self.ctx.enable_trading = False
 
-    def allow_trading_only_on_execution(self, ctx, allow_trading_without_action=True):
+    def allow_trading_only_on_execution(self, ctx, allow_trading_without_action=False):
         if not self.exchange_manager.is_backtesting:
             if self.action in (
                 matrix_enums.TradingModeCommands.EXECUTE,
-                matrix_enums.TradingModeCommands.OHLC_CALLBACK,
                 matrix_enums.TradingModeCommands.KLINE_CALLBACK,
             ):
                 ctx.enable_trading = True
@@ -157,8 +155,10 @@ class MatrixModeProducer(AbstractBaseModeProducer):
             title="Plot settings",
             show_in_summary=False,
             show_in_optimizer=False,
-            other_schema_values={
+            editor_options={
                 "grid_columns": 12,
+            },
+            other_schema_values={
                 "description": "Use those options wisely as it will slow "
                 "down the backtesting speed by quit a lot",
             },

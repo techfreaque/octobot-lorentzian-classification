@@ -45,8 +45,10 @@ class SpotMaster3000ModeSettings(trading_mode_basis.MatrixModeProducer):
             commons_enums.UserInputTypes.OBJECT,
             def_val=None,
             title="SpotMaster 3000 settings",
-            other_schema_values={
+            editor_options={
                 "grid_columns": 12,
+            },
+            other_schema_values={
                 "description": "If you have questions, issues, etc, let me know here: "
                 "https://github.com/techfreaque/octobot-spot-master-3000",
             },
@@ -60,8 +62,10 @@ class SpotMaster3000ModeSettings(trading_mode_basis.MatrixModeProducer):
             options=self.available_coins,
             title="Select the coins to hold/trade",
             parent_input_name=self.spot_master_name,
-            other_schema_values={
+            editor_options={
                 "grid_columns": 12,
+            },
+            other_schema_values={
                 "description": "The reference market should be selected and "
                 "make sure the allocation for each coin adds up to 100%. ",
             },

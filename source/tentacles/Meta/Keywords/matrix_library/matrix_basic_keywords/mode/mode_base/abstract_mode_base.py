@@ -48,7 +48,7 @@ PING_PONG_STORAGE_LOADING_TIMEOUT = 1000
 
 
 class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMode):
-
+    ENABLE_PRO_FEATURES = True
     AVAILABLE_API_ACTIONS = [matrix_enums.TradingModeCommands.EXECUTE]
 
     last_calls_by_exchange_id_and_time_frame: dict = {}
@@ -97,6 +97,7 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
             self.logger.info("Real time strategy activated")
         elif action == matrix_enums.TradingModeCommands.DISABLE_REALTIME_STRATEGY:
             self.disable_realtime_strategy()
+            await self.reload_scripts()
             self.logger.info("Real time strategy disabled")
         elif action == commons_enums.UserCommands.RELOAD_CONFIG.value:
             # also reload script on RELOAD_CONFIG
@@ -182,44 +183,43 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                     )
 
     def init_user_inputs(self, inputs: dict) -> None:
-        if simple_ping_pong:
-            self.enable_ping_pong = self.UI.user_input(
-                "enable_ping_pong",
-                commons_enums.UserInputTypes.BOOLEAN.value,
-                False,
-                registered_inputs=inputs,
-                title="Enable ping pong capabilities",
-                other_schema_values={
-                    "description": "requires a restart after enabling - required to use "
-                    "managed ping pong orders"
-                },
-                show_in_optimizer=False,
-                show_in_summary=False,
-                order=1000,
-            )
-        else:
-            self.enable_ping_pong = False
-        import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
+        if self.ENABLE_PRO_FEATURES:
+            if simple_ping_pong:
+                self.enable_ping_pong = self.UI.user_input(
+                    "enable_ping_pong",
+                    commons_enums.UserInputTypes.BOOLEAN.value,
+                    False,
+                    registered_inputs=inputs,
+                    title="Enable ping pong capabilities",
+                    other_schema_values={
+                        "description": "requires a restart after enabling - required to use "
+                        "managed ping pong orders"
+                    },
+                    show_in_optimizer=False,
+                    show_in_summary=False,
+                    order=1000,
+                )
+            else:
+                self.enable_ping_pong = False
+            import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
 
-        if execute_real_time_strategy:
-            self.enable_real_time_strategy = self.UI.user_input(
-                "enable_real_time_strategy",
-                commons_enums.UserInputTypes.BOOLEAN.value,
-                False,
-                registered_inputs=inputs,
-                title="Enable real time strategy",
-                other_schema_values={
-                    "description": "requires a restart after enabling - define a "
-                    "strategy that is based on the real time price"
-                },
-                show_in_optimizer=False,
-                show_in_summary=False,
-                order=1000,
-            )
-            if self.real_time_strategy_data:
-                self.real_time_strategy_data.clear_strategies_cache()
-        else:
-            self.real_time_strategy = False
+            if execute_real_time_strategy:
+                self.enable_real_time_strategy = self.UI.user_input(
+                    "enable_real_time_strategy",
+                    commons_enums.UserInputTypes.BOOLEAN.value,
+                    False,
+                    registered_inputs=inputs,
+                    title="Enable real time strategy",
+                    other_schema_values={
+                        "description": "requires a restart after enabling - define a "
+                        "strategy that is based on the real time price"
+                    },
+                    show_in_optimizer=False,
+                    show_in_summary=False,
+                    order=1000,
+                )
+            else:
+                self.real_time_strategy = False
 
     async def create_consumers(self) -> list:
         """
@@ -344,6 +344,8 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
 class AbstractBaseModeProducer(
     abstract_scripted_trading_mode.AbstractScriptedTradingModeProducer
 ):
+    ctx: context_management.Context = None
+
     async def ohlcv_callback(
         self,
         exchange: str,
@@ -455,8 +457,9 @@ class AbstractBaseModeProducer(
         run_data_writer = databases.RunDatabasesProvider.instance().get_run_db(
             self.exchange_manager.bot_id
         )
+        self.ctx = context
         try:
-            await self._pre_script_call(context, action)
+            await self.make_strategy(context, action)
             if (
                 hasattr(self.trading_mode, "TRADING_SCRIPT_MODULE")
                 and self.trading_mode.TRADING_SCRIPT_MODULE
@@ -485,7 +488,7 @@ class AbstractBaseModeProducer(
                 self.exchange_manager.bot_id, self.exchange_name, symbol
             ).set_initialized_flags(initialized, (time_frame,))
 
-    async def _pre_script_call(self, context, action: dict or str = None):
+    async def make_strategy(self, context, action: dict or str = None):
         pass
 
     def log_last_call_by_exchange_id(

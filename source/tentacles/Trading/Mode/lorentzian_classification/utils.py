@@ -94,10 +94,12 @@ class DisplaySettings:
         show_bar_predictions: bool,
         use_atr_offset: bool,
         bar_predictions_offset: float,
+        enable_additional_plots: bool,
     ):
         self.show_bar_colors: bool = show_bar_colors
         self.show_bar_predictions: bool = show_bar_predictions
         self.use_atr_offset: bool = use_atr_offset
+        self.enable_additional_plots: bool = enable_additional_plots
         self.bar_predictions_offset: float = bar_predictions_offset
 
 
@@ -125,14 +127,19 @@ class FilterSettings:
     def __init__(
         self,
         use_volatility_filter: bool,
+        plot_volatility_filter: bool,
         use_regime_filter: bool,
-        use_adx_filter: bool,
         regime_threshold: float,
+        plot_regime_filter: bool,
+        use_adx_filter: bool,
         adx_threshold: int,
+        plot_adx_filter: bool,
         use_ema_filter: bool,
         ema_period: int,
+        plot_ema_filter: bool,
         use_sma_filter: bool,
         sma_period: int,
+        plot_sma_filter: bool,
     ):
         self.use_volatility_filter: bool = use_volatility_filter
         self.use_regime_filter: bool = use_regime_filter
@@ -143,12 +150,18 @@ class FilterSettings:
         self.ema_period: int = ema_period
         self.use_sma_filter: int = use_sma_filter
         self.sma_period: int = sma_period
+        self.plot_volatility_filter: int = plot_volatility_filter
+        self.plot_regime_filter: int = plot_regime_filter
+        self.plot_adx_filter: int = plot_adx_filter
+        self.plot_ema_filter: int = plot_ema_filter
+        self.plot_sma_filter: int = plot_sma_filter
 
 
 class FeatureEngineeringSettings:
     def __init__(
         self,
         feature_count: int,
+        plot_features: bool,
         f1_string: str,
         f1_paramA: int,
         f1_paramB: int,
@@ -166,6 +179,7 @@ class FeatureEngineeringSettings:
         f5_paramB: int,
     ):
         self.feature_count: int = feature_count
+        self.plot_features: bool = plot_features
         self.f1_string: str = f1_string
         self.f1_paramA: int = f1_paramA
         self.f1_paramB: int = f1_paramB
@@ -223,6 +237,14 @@ class Filter:
         # Fractal Filters: Derived from relative appearances of signals in a given time series fractal/segment with a default length of 4 bars
         self.is_uptrend = numpy.logical_and(is_ema_uptrend, is_sma_uptrend)
         self.is_downtrend = numpy.logical_and(is_ema_downtrend, is_sma_downtrend)
+
+        self.volatility = volatility
+        self.regime = regime
+        self.adx = adx
+        self.is_ema_uptrend = is_ema_uptrend
+        self.is_sma_uptrend = is_sma_uptrend
+        self.is_ema_downtrend = is_ema_downtrend
+        self.is_sma_downtrend = is_sma_downtrend
 
 
 def shift_data(data_source: list or numpy.array, shift_by: int = 1):

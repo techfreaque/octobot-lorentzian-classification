@@ -1,8 +1,6 @@
 import octobot_commons.enums as enums
-from tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base import (
-    abstract_mode_base,
-)
-from tentacles.Trading.Mode.lorentzian_classification import utils
+import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_mode_base as abstract_mode_base
+import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
 
 class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
@@ -21,8 +19,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
-        Called right before starting the evaluator,
-        should define all the evaluator's user inputs
+        Called right before starting the trading mode,
+        should define all the trading mode's user inputs
         """
         self._init_general_settings(inputs)
         self._init_feature_engineering_settings(inputs)
@@ -168,6 +166,14 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Feature Engineering Settings",
         )
+        plot_features = self.UI.user_input(
+            "plot_features",
+            enums.UserInputTypes.BOOLEAN,
+            title="Plot Features",
+            def_val=False,
+            registered_inputs=inputs,
+            parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
+        )
         feature_count = self.UI.user_input(
             "feature_count",
             enums.UserInputTypes.INT,
@@ -181,6 +187,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 "description": "Number of features to use for ML predictions."
             },
         )
+
         feature_1_settings_name = "feature_1_settings"
         self.UI.user_input(
             feature_1_settings_name,
@@ -412,6 +419,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     )
         self.feature_engineering_settings = utils.FeatureEngineeringSettings(
             feature_count=feature_count,
+            plot_features=plot_features,
             f1_string=f1_string,
             f1_paramA=f1_paramA,
             f1_paramB=f1_paramB,
@@ -484,6 +492,14 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "description": "The offset of the bar predictions as a percentage "
                     "from the bar high or close."
                 },
+            ),
+            enable_additional_plots=self.UI.user_input(
+                "enable_additional_plots",
+                enums.UserInputTypes.BOOLEAN,
+                False,
+                inputs,
+                title="Enable additional plots",
+                parent_input_name=self.DISPLAY_SETTINGS_NAME,
             ),
         )
 
@@ -598,100 +614,167 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Filter Settings",
         )
+
+        use_volatility_filter = self.UI.user_input(
+            "use_volatility_filter",
+            enums.UserInputTypes.BOOLEAN,
+            True,
+            inputs,
+            title="Use Volatility Filter",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+            other_schema_values={
+                "description": "Whether to use the volatility filter."
+            },
+        )
+        plot_volatility_filter = False
+        if use_volatility_filter:
+            plot_volatility_filter = self.UI.user_input(
+                "plot_volatility_filter",
+                enums.UserInputTypes.BOOLEAN,
+                False,
+                inputs,
+                title="Plot Volatility Filter",
+                parent_input_name=self.FILTER_SETTINGS_NAME,
+            )
+        use_regime_filter = self.UI.user_input(
+            "use_regime_filter",
+            enums.UserInputTypes.BOOLEAN,
+            True,
+            inputs,
+            title="Use Regime Filter",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+        )
+        plot_regime_filter = False
+        if use_regime_filter:
+            plot_regime_filter = self.UI.user_input(
+                "plot_regime_filter",
+                enums.UserInputTypes.BOOLEAN,
+                False,
+                inputs,
+                title="Plot Regime Filter",
+                parent_input_name=self.FILTER_SETTINGS_NAME,
+            )
+        regime_threshold = self.UI.user_input(
+            "regime_threshold",
+            enums.UserInputTypes.FLOAT,
+            -0.1,
+            inputs,
+            min_val=-10,
+            max_val=10,
+            title="Regime Threshold",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+            other_schema_values={
+                "description": "Whether to use the trend detection filter. "
+                "Threshold for detecting Trending/Ranging markets. Use steps of 0.1"
+            },
+        )
+        use_adx_filter = self.UI.user_input(
+            "use_adx_filter",
+            enums.UserInputTypes.BOOLEAN,
+            False,
+            inputs,
+            title="Use ADX Filter",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+        )
+        plot_adx_filter = False
+        if use_adx_filter:
+            plot_adx_filter = self.UI.user_input(
+                "plot_adx_filter",
+                enums.UserInputTypes.BOOLEAN,
+                False,
+                inputs,
+                title="Plot EMA Filter",
+                parent_input_name=self.FILTER_SETTINGS_NAME,
+            )
+        adx_threshold = self.UI.user_input(
+            "adx_threshold",
+            enums.UserInputTypes.INT,
+            20,
+            inputs,
+            min_val=0,
+            max_val=100,
+            title="ADX Threshold",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+            other_schema_values={
+                "description": "Whether to use the ADX filter. "
+                "Threshold for detecting Trending/Ranging markets."
+            },
+        )
+        use_ema_filter = self.UI.user_input(
+            "use_ema_filter",
+            enums.UserInputTypes.BOOLEAN,
+            False,
+            inputs,
+            title="Use EMA Filter",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+        )
+        plot_ema_filter = False
+        if use_ema_filter:
+            plot_ema_filter = self.UI.user_input(
+                "plot_ema_filter",
+                enums.UserInputTypes.BOOLEAN,
+                False,
+                inputs,
+                title="Plot EMA Filter",
+                parent_input_name=self.FILTER_SETTINGS_NAME,
+            )
+
+        ema_period = self.UI.user_input(
+            "ema_period",
+            enums.UserInputTypes.INT,
+            200,
+            inputs,
+            min_val=1,
+            title="EMA Period",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+            other_schema_values={
+                "description": "The period of the EMA used for the EMA Filter."
+            },
+        )
+        use_sma_filter = self.UI.user_input(
+            "use_sma_filter",
+            enums.UserInputTypes.BOOLEAN,
+            False,
+            inputs,
+            title="Use SMA Filter",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+        )
+        plot_sma_filter = False
+        if use_sma_filter:
+            plot_sma_filter = self.UI.user_input(
+                "plot_sma_filter",
+                enums.UserInputTypes.BOOLEAN,
+                False,
+                inputs,
+                title="Plot SMA Filter",
+                parent_input_name=self.FILTER_SETTINGS_NAME,
+            )
+        sma_period = self.UI.user_input(
+            "sma_period",
+            enums.UserInputTypes.INT,
+            200,
+            inputs,
+            min_val=1,
+            title="SMA Period",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+            other_schema_values={
+                "description": "The period of the SMA used for the SMA Filter."
+            },
+        )
+
         self.filter_settings: utils.FilterSettings = utils.FilterSettings(
-            use_volatility_filter=self.UI.user_input(
-                "use_volatility_filter",
-                enums.UserInputTypes.BOOLEAN,
-                True,
-                inputs,
-                title="Use Volatility Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Whether to use the volatility filter."
-                },
-            ),
-            use_regime_filter=self.UI.user_input(
-                "use_regime_filter",
-                enums.UserInputTypes.BOOLEAN,
-                True,
-                inputs,
-                title="Use Regime Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-            ),
-            regime_threshold=self.UI.user_input(
-                "regime_threshold",
-                enums.UserInputTypes.FLOAT,
-                -0.1,
-                inputs,
-                min_val=-10,
-                max_val=10,
-                title="Regime Threshold",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Whether to use the trend detection filter. "
-                    "Threshold for detecting Trending/Ranging markets. Use steps of 0.1"
-                },
-            ),
-            use_adx_filter=self.UI.user_input(
-                "use_adx_filter",
-                enums.UserInputTypes.BOOLEAN,
-                False,
-                inputs,
-                title="Use ADX Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-            ),
-            adx_threshold=self.UI.user_input(
-                "adx_threshold",
-                enums.UserInputTypes.INT,
-                20,
-                inputs,
-                min_val=0,
-                max_val=100,
-                title="ADX Threshold",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Whether to use the ADX filter. "
-                    "Threshold for detecting Trending/Ranging markets."
-                },
-            ),
-            use_ema_filter=self.UI.user_input(
-                "use_ema_filter",
-                enums.UserInputTypes.BOOLEAN,
-                False,
-                inputs,
-                title="Use EMA Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-            ),
-            ema_period=self.UI.user_input(
-                "ema_period",
-                enums.UserInputTypes.INT,
-                200,
-                inputs,
-                min_val=1,
-                title="EMA Period",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "The period of the EMA used for the EMA Filter."
-                },
-            ),
-            use_sma_filter=self.UI.user_input(
-                "use_sma_filter",
-                enums.UserInputTypes.BOOLEAN,
-                False,
-                inputs,
-                title="Use SMA Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-            ),
-            sma_period=self.UI.user_input(
-                "sma_period",
-                enums.UserInputTypes.INT,
-                200,
-                inputs,
-                min_val=1,
-                title="SMA Period",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "The period of the SMA used for the SMA Filter."
-                },
-            ),
+            use_volatility_filter=use_volatility_filter,
+            plot_volatility_filter=plot_volatility_filter,
+            use_regime_filter=use_regime_filter,
+            regime_threshold=regime_threshold,
+            plot_regime_filter=plot_regime_filter,
+            use_adx_filter=use_adx_filter,
+            adx_threshold=adx_threshold,
+            plot_adx_filter=plot_adx_filter,
+            use_ema_filter=use_ema_filter,
+            ema_period=ema_period,
+            plot_ema_filter=plot_ema_filter,
+            use_sma_filter=use_sma_filter,
+            sma_period=sma_period,
+            plot_sma_filter=plot_sma_filter,
         )

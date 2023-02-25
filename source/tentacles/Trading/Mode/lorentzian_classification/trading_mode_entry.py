@@ -1,10 +1,12 @@
 import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
+import octobot_trading.modes.script_keywords.context_management as context_management
 import tentacles.Trading.Mode.lorentzian_classification.classification as classification
 import tentacles.Trading.Mode.lorentzian_classification.settings as settings
 
 
 class LorentzianClassificationMode(settings.LorentzianClassificationModeInputs):
+    ENABLE_PRO_FEATURES = False
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.producer = LorentzianClassificationProducer
@@ -23,7 +25,8 @@ class LorentzianClassificationMode(settings.LorentzianClassificationModeInputs):
                 pass
         else:
             logging.get_logger(self.get_name()).error(
-                "At least one exchange must be enabled to use LorentzianClassificationMode"
+                "At least one exchange must be enabled "
+                "to use LorentzianClassificationMode"
             )
 
     def get_mode_producer_classes(self) -> list:
@@ -41,8 +44,8 @@ class LorentzianClassificationMode(settings.LorentzianClassificationModeInputs):
 
 
 class LorentzianClassificationProducer(classification.LorentzianClassificationScript):
-    async def _pre_script_call(self, context, action: dict or str = None) -> None:
+    async def make_strategy(self, ctx: context_management.Context, action: str):
         self.action = action
         await self.evaluate_lorentzian_classification(
-            ctx=context,
+            ctx=ctx,
         )

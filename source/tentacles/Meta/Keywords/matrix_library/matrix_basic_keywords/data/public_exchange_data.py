@@ -50,7 +50,9 @@ async def user_select_candle_source_name(
 
 async def get_candles_(maker, source_name="close", time_frame=None, symbol=None):
     symbol = symbol or maker.ctx.symbol
-    time_frame = time_frame or maker.current_indicator_time_frame or maker.ctx.time_frame
+    time_frame = (
+        time_frame or maker.current_indicator_time_frame or maker.ctx.time_frame
+    )
     try:
         if maker.ctx.exchange_manager.is_backtesting:
             return maker.candles[symbol][time_frame][source_name]
@@ -106,9 +108,7 @@ async def get_current_candle(
             maker.ctx, symbol=symbol, time_frame=time_frame
         )
     if source_name == "live":
-        return await exchange_public_data.current_live_price(
-            maker.ctx, symbol=symbol
-        )
+        return await exchange_public_data.current_live_price(maker.ctx, symbol=symbol)
 
 
 async def _get_candles_from_name(

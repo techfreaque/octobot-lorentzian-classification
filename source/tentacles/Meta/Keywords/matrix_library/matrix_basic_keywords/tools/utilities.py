@@ -56,11 +56,15 @@ def cut_data_to_same_len(data_set: tuple or list, get_list=False):
     cutted_data: list = []
 
     for data in data_set:
-        _len = len(data)
-        if not min_len or _len < min_len:
-            min_len = _len
+        if data is not None:
+            _len = len(data)
+            if not min_len or _len < min_len:
+                min_len = _len
     for data in data_set:
-        cutted_data.append(data[len(data) - min_len :])
-    if get_list or isinstance(data, list):
+        if data is not None:
+            cutted_data.append(data[len(data) - min_len :])
+        else:
+            cutted_data.append(None)
+    if get_list:
         return cutted_data
     return tuple(cutted_data)
