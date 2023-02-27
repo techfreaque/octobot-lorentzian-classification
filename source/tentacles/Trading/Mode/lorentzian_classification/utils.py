@@ -7,7 +7,15 @@ import tentacles.Trading.Mode.lorentzian_classification.ml_extensions_2.ml_exten
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utils
 
 
-def series_from(feature_string, _close, _high, _low, _hlc3, f_paramA, f_paramB):
+def series_from(
+    feature_string: str,
+    _close: npt.NDArray[numpy.float64],
+    _high: npt.NDArray[numpy.float64],
+    _low: npt.NDArray[numpy.float64],
+    _hlc3: npt.NDArray[numpy.float64],
+    f_paramA: int,
+    f_paramB: int,
+) -> npt.NDArray[numpy.float64]:
     if feature_string == "RSI":
         return ml_extensions.n_rsi(_close, f_paramA, f_paramB)
     if feature_string == "WT":
@@ -18,73 +26,42 @@ def series_from(feature_string, _close, _high, _low, _hlc3, f_paramA, f_paramB):
         return ml_extensions.n_adx(_high, _low, _close, f_paramA)
 
 
-class Settings:
+class GeneralSettings:
     def __init__(
         self,
         source: float,
         neighbors_count: int,
         max_bars_back: int,
         color_compression: int,
-        # use_dynamic_exits: bool,
         exit_type: str,
     ):
         self.source: float = source
         self.neighbors_count: int = neighbors_count
         self.max_bars_back: int = max_bars_back
         self.color_compression: int = color_compression
-        # self.use_dynamic_exits: bool = use_dynamic_exits
         self.exit_type: str = exit_type
 
 
 class SignalDirection:
-    long = 1
-    short = -1
-    neutral = 0
+    long: int = 1
+    short: int = -1
+    neutral: int = 0
 
 
 class FeatureArrays:
     def __init__(
         self,
-        f1: typing.List[float],
-        f2: typing.List[float],
-        f3: typing.List[float],
-        f4: typing.List[float],
-        f5: typing.List[float],
+        f1: npt.NDArray[numpy.float64],
+        f2: npt.NDArray[numpy.float64],
+        f3: npt.NDArray[numpy.float64],
+        f4: npt.NDArray[numpy.float64],
+        f5: npt.NDArray[numpy.float64],
     ):
-        self.f1: typing.List[float] = f1
-        self.f2: typing.List[float] = f2
-        self.f3: typing.List[float] = f3
-        self.f4: typing.List[float] = f4
-        self.f5: typing.List[float] = f5
-
-
-class FeatureSeries:
-    def __init__(self, f1: float, f2: float, f3: float, f4: float, f5: float):
-        self.f1: float = f1
-        self.f2: float = f2
-        self.f3: float = f3
-        self.f4: float = f4
-        self.f5: float = f5
-
-
-class MLModel:
-    def __init__(
-        self,
-        first_bar_index: int,
-        training_labels: typing.List[int],
-        loop_size: int,
-        last_distance: float,
-        distances_array: typing.List[float],
-        predictions_array: typing.List[int],
-        prediction: int,
-    ):
-        self.first_bar_index: int = first_bar_index
-        self.training_labels: typing.List[int] = training_labels
-        self.loop_size: int = loop_size
-        self.last_distance: float = last_distance
-        self.distances_array: typing.List[float] = distances_array
-        self.predictions_array: typing.List[int] = predictions_array
-        self.prediction: int = prediction
+        self.f1: npt.NDArray[numpy.float64] = f1
+        self.f2: npt.NDArray[numpy.float64] = f2
+        self.f3: npt.NDArray[numpy.float64] = f3
+        self.f4: npt.NDArray[numpy.float64] = f4
+        self.f5: npt.NDArray[numpy.float64] = f5
 
 
 class DisplaySettings:
@@ -201,13 +178,13 @@ class Filter:
     # numpy bool arays
     def __init__(
         self,
-        volatility,
-        regime,
-        adx,
-        is_ema_uptrend,
-        is_ema_downtrend,
-        is_sma_uptrend,
-        is_sma_downtrend,
+        volatility: npt.NDArray[numpy.bool_],
+        regime: npt.NDArray[numpy.bool_],
+        adx: npt.NDArray[numpy.bool_],
+        is_ema_uptrend: npt.NDArray[numpy.bool_],
+        is_ema_downtrend: npt.NDArray[numpy.bool_],
+        is_sma_uptrend: npt.NDArray[numpy.bool_],
+        is_sma_downtrend: npt.NDArray[numpy.bool_],
     ):
         (
             volatility,
@@ -247,15 +224,15 @@ class Filter:
         self.is_sma_downtrend = is_sma_downtrend
 
 
-def shift_data(data_source: list or numpy.array, shift_by: int = 1):
+def shift_data(data_source: list or npt.NDArray[any], shift_by: int = 1):
     cutted_data = data_source[shift_by:]
     shifted_data = data_source[:-shift_by]
     return cutted_data, shifted_data
 
 
 def get_is_crossing_data(
-    data1: numpy.array, data2: numpy.array
-) -> typing.Tuple[list or numpy.array]:
+    data1: npt.NDArray[numpy.float64], data2: npt.NDArray[numpy.float64]
+) -> typing.Tuple[npt.NDArray[numpy.bool_], npt.NDArray[numpy.bool_]]:
     data1_cutted_1, data1_shifted_1 = shift_data(data1, 1)
     data2_cutted_1, data2_shifted_1 = shift_data(data2, 1)
     crossing_ups = numpy.logical_and(
@@ -267,7 +244,9 @@ def get_is_crossing_data(
     return crossing_ups, crossing_downs
 
 
-def calculate_rma(src, length):
+def calculate_rma(
+    src: npt.NDArray[numpy.float64], length
+) -> npt.NDArray[numpy.float64]:
     # TODO not the same as on here: https://www.tradingview.com/pine-script-reference/v5/#fun_ta%7Bdot%7Drma
     alpha = 1 / length
     sma = tulipy.sma(src, length)[50:]  # cut first data as its not very accurate

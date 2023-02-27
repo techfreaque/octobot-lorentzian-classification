@@ -4,7 +4,7 @@ import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
 
 class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
-    general_settings: utils.Settings = None
+    general_settings: utils.GeneralSettings = None
     filter_settings: utils.FilterSettings = None
     feature_engineering_settings: utils.FeatureEngineeringSettings = None
     kernel_settings: utils.KernelSettings = None
@@ -37,7 +37,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="General Settings",
         )
         # Settings object for user-defined settings
-        self.general_settings = utils.Settings(
+        self.general_settings = utils.GeneralSettings(
             source=self.UI.user_input(
                 "candle_source",
                 enums.UserInputTypes.OPTIONS,

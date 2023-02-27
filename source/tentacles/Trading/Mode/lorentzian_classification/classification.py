@@ -105,13 +105,14 @@
 
 
 import math
+import typing
 import numpy
+import numpy.typing as npt
 import tulipy
 
 import octobot_commons.enums as enums
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords.context_management as context_management
-import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_settings as backtesting_settings
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 from tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order import (
@@ -160,7 +161,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
     ):
         if await self._trade_cached_backtesting_candles_if_available(ctx):
             return
-        s_time = basic_utilities.start_measure_time(" Lorentzian Classification")
+        s_time = basic_utilities.start_measure_time(" Lorentzian Classification -")
         await self.init_order_settings(ctx)
         (
             candle_closes,
@@ -175,7 +176,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             candle_source_name=self.trading_mode.general_settings.source,
         )
         data_length = len(candle_highs)
-        _filters, recentAtr, historicalAtr = self._get_filters(
+        _filters, recentAtr, historicalAtr = self._get_all_filters(
             candle_closes,
             data_length,
             candles_ohlc4,
@@ -200,15 +201,17 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             was_bearish_rates,
         ) = self.get_kernel_data(user_selected_candles, data_length)
 
-        feature_arrays: utils.FeatureArrays = self.get_feature_arrays(
+        feature_arrays: utils.FeatureArrays = self._get_feature_arrays(
             candle_closes=candle_closes,
             candle_highs=candle_highs,
             candle_lows=candle_lows,
             candles_hlc3=candles_hlc3,
         )
+        y_train_series: npt.NDArray[numpy.bool_] = self._get_y_train_series(
+            user_selected_candles
+        )
 
-        y_train_series = self._get_y_train_series(user_selected_candles)
-        # TOD remove
+        # TOD remove when RMA is accurate
         rma = utils.calculate_rma(candle_closes, 15)
 
         # cut all historical data to same length for numpy and loop indizies being aligned
@@ -282,8 +285,8 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             )
         )
 
-        cutted_data_length = len(candle_closes)
-        max_bars_back_index = self.get_max_bars_back_index(cutted_data_length)
+        cutted_data_length: int = len(candle_closes)
+        max_bars_back_index: int = self._get_max_bars_back_index(cutted_data_length)
 
         # =================================
         # ==== Next Bar Classification ====
@@ -295,28 +298,25 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         # but support for other training lengths may be added in the future.
 
         previous_signals: list = [utils.SignalDirection.neutral]
-        # last_signal = utils.SignalDirection.neutral
-
         historical_predictions: list = []
-        # lorentzian_distance_test: list = []
-        # bars_held: int = 0
-        # previous_is_valid_short_exit = False
-        # previous_is_valid_long_exit = False
-        bars_since_red_entry = 0
-        bars_since_green_entry = 0
-        # bars_since_red_exit = 0
-        # bars_since_green_exit = 0
+        bars_since_red_entry: int = 5  # dont trigger exits on loop start
+        bars_since_green_entry: int = 5  # dont trigger exits on loop start
 
         distances: list = []
-        last_distances: list = []
         predictions: list = []
         start_long_trades: list = []
         start_short_trades: list = []
         exit_short_trades: list = []
         exit_long_trades: list = []
 
+        # TODO remove when _classify_current_candle is accurate
+        last_distances: list = []
+
         for candle_index in range(max_bars_back_index, cutted_data_length):
-            bars_since_green_entry, bars_since_red_entry = self.classify_current_candle(
+            (
+                bars_since_green_entry,
+                bars_since_red_entry,
+            ) = self._classify_current_candle(
                 y_train_series=y_train_series,
                 candle_index=candle_index,
                 feature_arrays=feature_arrays,
@@ -405,20 +405,20 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             " Lorentzian Classification - storing plots",
         )
 
-    def classify_current_candle(
+    def _classify_current_candle(
         self,
-        y_train_series,
+        y_train_series: npt.NDArray[numpy.float64],
         candle_index: int,
         feature_arrays: utils.FeatureArrays,
         historical_predictions: list,
-        _filters,
+        _filters: utils.Filter,
         previous_signals: list,
-        is_bullishs,
-        is_bearishs,
-        alerts_bullish,
-        alerts_bearish,
-        is_bearish_changes,
-        is_bullish_changes,
+        is_bullishs: npt.NDArray[numpy.bool_],
+        is_bearishs: npt.NDArray[numpy.bool_],
+        alerts_bullish: npt.NDArray[numpy.bool_],
+        alerts_bearish: npt.NDArray[numpy.bool_],
+        is_bearish_changes: npt.NDArray[numpy.bool_],
+        is_bullish_changes: npt.NDArray[numpy.bool_],
         # last_signal,
         # bars_held: int,
         # previous_is_valid_short_exit,
@@ -434,7 +434,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         start_short_trades: list,
         exit_short_trades: list,
         exit_long_trades: list,
-    ):
+    ) -> typing.Tuple[int, int]:
         # =========================
         # ====  Core ML Logic  ====
         # =========================
@@ -513,7 +513,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
 
         for candles_back in range(0, size_Loop):
             candles_back_index = candle_index - size_Loop + candles_back
-            lorentzian_distance = self.get_lorentzian_distance(
+            lorentzian_distance: float = self.get_lorentzian_distance(
                 candle_index=candle_index,
                 candles_back_index=candles_back,
                 feature_arrays=feature_arrays,
@@ -560,7 +560,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         )
         return bars_since_green_entry, bars_since_red_entry
 
-    def get_filters(self, candle_closes, data_length):
+    def _get_ma_filters(self, candle_closes, data_length):
         if self.trading_mode.filter_settings.use_ema_filter:
             filter_ema_candles, filter_ema = basic_utilities.cut_data_to_same_len(
                 (
@@ -627,11 +627,6 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         is_different_signal_type: bool = previous_signals[-1] != signal
         previous_signals.append(signal)
 
-        # if is_different_signal_type:
-        #     bars_held = 0
-        # else:
-        #     bars_held += 1
-
         # Fractal Filters: Derived from relative appearances of signals in a given time series fractal/segment with a default length of 4 bars
         # is_early_signal_flip = previous_signals[-1] and (
         #     previous_signals[-2] or previous_signals[-3] or previous_signals[-4]
@@ -666,6 +661,9 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         start_short_trades.append(start_short_trade)
 
         # exits
+
+        # utils.ExitTypes.SWITCH_SIDES doesnt need exits
+
         if self.trading_mode.general_settings.exit_type == utils.ExitTypes.FOUR_BARS:
             # Bar-Count Filters: Represents strict filters based on a pre-defined holding period of 4 bars
             bars_since_green_entry, bars_since_red_entry = self._handle_four_bar_exit(
@@ -677,6 +675,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                 start_short_trade,
             )
         # elif self.trading_mode.general_settings.exit_type == utils.ExitTypes.DYNAMIC:
+        # TODO
         #     pass
 
         #     if alerts_bullish[candle_index]:
@@ -745,6 +744,9 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         start_long_trade: bool,
         start_short_trade: bool,
     ):
+        # TODO to compute in one go:
+        #   use shifted start_long_trade / start_short_trade arrays for exits
+        #   + use numpy.where for other side signals for bars_since <4
         if start_long_trade:
             bars_since_green_entry = 0
         else:
@@ -772,7 +774,6 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         return bars_since_green_entry, bars_since_red_entry
 
     def _get_y_train_series(self, user_selected_candles):
-        # TODO check if 4/ is same as on tradingview
         cutted_candles, shifted_candles = utils.shift_data(user_selected_candles, 4)
         return numpy.where(
             shifted_candles < cutted_candles,
@@ -790,6 +791,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         candles_back_index: int,
         feature_arrays: utils.FeatureArrays,
     ) -> float:
+        # TODO reafctor use list and sum instead
         if self.trading_mode.feature_engineering_settings.feature_count == 5:
             return (
                 math.log(
@@ -1019,7 +1021,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             signals=start_long_trades,
             values=slightly_below_lows,
             times=candle_times,
-            value_key="start_long_trades",
+            value_key="st-l",
         )
         await matrix_plots.plot_conditional(
             ctx=ctx,
@@ -1027,7 +1029,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             signals=start_short_trades,
             values=slightly_above_highs,
             times=candle_times,
-            value_key="start_short_trades",
+            value_key="st-s",
         )
         has_exit_signals = len(exit_short_trades) and len(exit_long_trades)
         if has_exit_signals:
@@ -1494,7 +1496,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                 additional_values_by_key=additional_values_by_key,
             )
 
-    def _get_filters(
+    def _get_all_filters(
         self,
         candle_closes,
         data_length,
@@ -1510,7 +1512,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             is_ema_downtrend,
             is_sma_uptrend,
             is_sma_downtrend,
-        ) = self.get_filters(candle_closes, data_length)
+        ) = self._get_ma_filters(candle_closes, data_length)
         volatility, recentAtr, historicalAtr = ml_extensions.filter_volatility(
             candle_highs=candle_highs,
             candle_lows=candle_lows,
@@ -1543,10 +1545,15 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         )
         return _filter, recentAtr, historicalAtr
 
-    def get_feature_arrays(
-        self, candle_closes, candle_highs, candle_lows, candles_hlc3
+    def _get_feature_arrays(
+        self,
+        candle_closes: npt.NDArray[numpy.float64],
+        candle_highs: npt.NDArray[numpy.float64],
+        candle_lows: npt.NDArray[numpy.float64],
+        candles_hlc3: npt.NDArray[numpy.float64],
     ) -> utils.FeatureArrays:
         return utils.FeatureArrays(
+            # TODO use list and loop instead
             f1=utils.series_from(
                 self.trading_mode.feature_engineering_settings.f1_string,
                 candle_closes,
@@ -1595,16 +1602,18 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         )
 
     def get_kernel_data(self, user_selected_candles, data_length: int) -> tuple:
+        # TODO colors
         # c_green = color.new(#009988, 20)
         # c_red = color.new(#CC3311, 20)
         # transparent = color.new(#000000, 100)
-        yhat1: numpy.array = kernel.rationalQuadratic(
+
+        yhat1: npt.NDArray[numpy.float64] = kernel.rationalQuadratic(
             user_selected_candles,
             self.trading_mode.kernel_settings.lookback_window,
             self.trading_mode.kernel_settings.relative_weighting,
             self.trading_mode.kernel_settings.regression_level,
         )
-        yhat2: numpy.array = kernel.gaussian(
+        yhat2: npt.NDArray[numpy.float64] = kernel.gaussian(
             user_selected_candles,
             self.trading_mode.kernel_settings.lookback_window
             - self.trading_mode.kernel_settings.lag,
@@ -1612,54 +1621,56 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         )
         yhat1, yhat2 = basic_utilities.cut_data_to_same_len((yhat1, yhat2))
 
-        kernel_estimate: numpy.array = yhat1
+        kernel_estimate: npt.NDArray[numpy.float64] = yhat1
         # Kernel Rates of Change
         # shift and cut data for numpy
         yhat1_cutted_1, yhat1_shifted_1 = utils.shift_data(yhat1, 1)
         yhat1_cutted_2, yhat1_shifted_2 = utils.shift_data(yhat1, 2)
-        was_bearish_rates: numpy.array = yhat1_shifted_2 > yhat1_cutted_2
-        was_bullish_rates: numpy.array = yhat1_shifted_2 < yhat1_cutted_2
+        was_bearish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_2 > yhat1_cutted_2
+        was_bullish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_2 < yhat1_cutted_2
 
-        is_bearish_rates: numpy.array = yhat1_shifted_1 > yhat1_cutted_1
-        is_bullish_rates: numpy.array = yhat1_shifted_1 < yhat1_cutted_1
+        is_bearish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_1 > yhat1_cutted_1
+        is_bullish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_1 < yhat1_cutted_1
 
         is_bearish_rates, was_bullish_rates = basic_utilities.cut_data_to_same_len(
             (is_bearish_rates, was_bullish_rates)
         )
-        is_bearish_changes: numpy.array = numpy.logical_and(
+        is_bearish_changes: npt.NDArray[numpy.bool_] = numpy.logical_and(
             is_bearish_rates, was_bullish_rates
         )
         is_bullish_rates, was_bearish_rates = basic_utilities.cut_data_to_same_len(
             (is_bullish_rates, was_bearish_rates)
         )
-        is_bullish_changes: numpy.array = numpy.logical_and(
+        is_bullish_changes: npt.NDArray[numpy.bool_] = numpy.logical_and(
             is_bullish_rates, was_bearish_rates
         )
         # Kernel Crossovers
         is_bullish_cross_alerts, is_bearish_cross_alerts = utils.get_is_crossing_data(
             yhat2, yhat1
         )
-        is_bullish_smooths: numpy.array = yhat2 >= yhat1
-        is_bearish_smooths: numpy.array = yhat2 <= yhat1
+        is_bullish_smooths: npt.NDArray[numpy.bool_] = yhat2 >= yhat1
+        is_bearish_smooths: npt.NDArray[numpy.bool_] = yhat2 <= yhat1
 
         # # Kernel Colors
+        # TODO
         # # color colorByCross = isBullishSmooth ? c_green : c_red
         # # color colorByRate = isBullishRate ? c_green : c_red
         # # color plotColor = showKernelEstimate ? (useKernelSmoothing ? colorByCross : colorByRate) : transparent
         # # plot(kernelEstimate, color=plotColor, linewidth=2, title="Kernel Regression Estimate")
+
         # # Alert Variables
-        alerts_bullish = (
+        alerts_bullish: npt.NDArray[numpy.bool_] = (
             is_bullish_cross_alerts
             if self.trading_mode.kernel_settings.use_kernel_smoothing
             else is_bullish_changes
         )
-        alerts_bearish = (
+        alerts_bearish: npt.NDArray[numpy.bool_] = (
             is_bearish_cross_alerts
             if self.trading_mode.kernel_settings.use_kernel_smoothing
             else is_bearish_changes
         )
         # Bullish and Bearish Filters based on Kernel
-        is_bullishs: numpy.array = (
+        is_bullishs: npt.NDArray[numpy.bool_] = (
             (
                 is_bullish_smooths
                 if self.trading_mode.kernel_settings.use_kernel_smoothing
@@ -1668,7 +1679,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             if self.trading_mode.kernel_settings.use_kernel_filter
             else [True] * data_length
         )
-        is_bearishs: numpy.array = (
+        is_bearishs: npt.NDArray[numpy.bool_] = (
             (
                 is_bearish_smooths
                 if self.trading_mode.kernel_settings.use_kernel_smoothing
@@ -1741,7 +1752,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
             candle_times,
         )
 
-    def get_max_bars_back_index(self, cutted_data_length) -> int:
+    def _get_max_bars_back_index(self, cutted_data_length) -> int:
         if self.ctx.exchange_manager.is_backtesting:
             return self.trading_mode.general_settings.max_bars_back
         if cutted_data_length >= self.trading_mode.general_settings.max_bars_back:
@@ -1753,7 +1764,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                 "or reduce the max_bars_back setting. Classification will run "
                 f"on {cutted_data_length} bars"
             )
-            return 0  # start on bar 0
+            return 0  # start on first bar with all filters, indicators etc. available
 
     async def _trade_live_candle(
         self,
@@ -1874,7 +1885,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                         await self.exit_long_trade()
                     return True
                 except KeyError as error:
-                    print(f"Failed to get cached strategy signal - error: {error}")
+                    print(f"No cached strategy signal for this candle - error: {error}")
                     return True
         return False
 

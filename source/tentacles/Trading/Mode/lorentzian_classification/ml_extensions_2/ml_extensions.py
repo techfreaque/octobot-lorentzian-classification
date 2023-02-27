@@ -8,33 +8,38 @@ import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilit
 
 
 def rescale(
-    src, oldMin: float, oldMax: float, newMin: float, newMax: float
+    src: npt.NDArray[numpy.float64],
+    oldMin: float,
+    oldMax: float,
+    newMin: float,
+    newMax: float,
 ):
     return newMin + (newMax - newMin) * (src - oldMin) / max(oldMax - oldMin, 10e-10)
 
 
-def normalize(src, 
-            #   _min: float, _max: float
-              ):
+def normalize(
+    src: npt.NDArray[numpy.float64],
+    #   _min: float, _max: float
+):
     # normalizes to values from 0 -1
     min_val = numpy.min(src)
     return (src - min_val) / (numpy.max(src) - min_val)
 
-    return _min + (_max - _min) * (src - numpy.min(src)) / numpy.max(src)
+    # return _min + (_max - _min) * (src - numpy.min(src)) / numpy.max(src)
 
 
-def n_rsi(_close, f_paramA, f_paramB):
+def n_rsi(_close: npt.NDArray[numpy.float64], f_paramA, f_paramB):
     return rescale(tulipy.ema(tulipy.rsi(_close, f_paramA), f_paramB), 0, 100, 0, 1)
 
 
-def n_wt(_hlc3, f_paramA, f_paramB):
+def n_wt(_hlc3: npt.NDArray[numpy.float64], f_paramA, f_paramB):
     ema1 = tulipy.ema(_hlc3, f_paramA)
     ema2 = tulipy.ema(abs(_hlc3 - ema1), f_paramA)
     ci = (_hlc3[1:] - ema1[1:]) / (0.015 * ema2[1:])
     wt1 = tulipy.ema(ci, f_paramB)  # tci
     wt2 = tulipy.sma(wt1, 4)
     wt1, wt2 = basic_utils.cut_data_to_same_len((wt1, wt2))
-    return normalize(wt1 - wt2) #, 0, 1)
+    return normalize(wt1 - wt2)  # , 0, 1)
 
 
 def n_cci(
@@ -44,10 +49,18 @@ def n_cci(
     f_paramA,
     f_paramB,
 ):
-    return normalize(tulipy.ema(tulipy.cci(closes, closes, closes, f_paramA), f_paramB))#, 0, 1)
+    # use closes, closes, closes to get same cci as on tradingview
+    return normalize(
+        tulipy.ema(tulipy.cci(closes, closes, closes, f_paramA), f_paramB)
+    )  # , 0, 1)
 
 
-def n_adx(highSrc, lowSrc, closeSrc, f_paramA: int):
+def n_adx(
+    highSrc: npt.NDArray[numpy.float64],
+    lowSrc: npt.NDArray[numpy.float64],
+    closeSrc: npt.NDArray[numpy.float64],
+    f_paramA: int,
+):
     length: int = f_paramA
     data_length: int = len(highSrc)
     trSmooth: typing.List[float] = [0]
@@ -84,11 +97,12 @@ def n_adx(highSrc, lowSrc, closeSrc, f_paramA: int):
         )
         diPositive = smoothDirectionalMovementPlus[-1] / trSmooth[-1] * 100
         diNegative = smoothnegMovement[-1] / trSmooth[-1] * 100
-        
+
         if index > 3:
             # skip early candles as its division by 0
             dx.append(abs(diPositive - diNegative) / (diPositive + diNegative) * 100)
     dx = numpy.array(dx)
+    # TODO RMA is not the same as on trading view
     adx = utils.calculate_rma(dx, length)
     return rescale(adx, 0, 100, 0, 1)
 
@@ -185,7 +199,9 @@ def filter_adx(
         di_negative = smoothneg_movements[-1] / tr_smooths[-1] * 100
         if index > 3:
             # skip early candles as its division by 0
-            dx.append(abs(di_positive - di_negative) / (di_positive + di_negative) * 100)
+            dx.append(
+                abs(di_positive - di_negative) / (di_positive + di_negative) * 100
+            )
     dx: npt.NDArray[numpy.float64] = numpy.array(dx)
     adx: npt.NDArray[numpy.float64] = utils.calculate_rma(dx, length)
     return adx > adx_threshold
