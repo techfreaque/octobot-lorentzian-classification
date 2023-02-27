@@ -1,0 +1,12 @@
+author: DrakkarSoftware
+description: ''
+name: any_platform.zip
+repository: Unknown repository location
+short-name: any_platform.zip
+tags: []
+tentacles:
+- time_frame_strategy_evaluator@1.3.1
+- matrix_basic_keywords@0.6.9
+- lorentzian_classification@0.8.6
+type: tentacle_package
+version: unknown_version
