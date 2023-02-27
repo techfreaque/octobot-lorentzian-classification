@@ -20,4 +20,4 @@ import tentacles.Evaluator.Strategies.blank_strategy_evaluator.blank_strategy \
 class TimeFrameStrategyEvaluator(blank_strategy.BlankStrategyEvaluator):
     def get_full_cycle_evaluator_types(self) -> tuple:
         # returns a tuple as it is faster to create than a list
-        return 
+        return []
