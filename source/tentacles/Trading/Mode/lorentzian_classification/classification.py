@@ -1753,9 +1753,9 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         )
 
     def _get_max_bars_back_index(self, cutted_data_length) -> int:
-        if self.ctx.exchange_manager.is_backtesting:
-            return self.trading_mode.general_settings.max_bars_back
         if cutted_data_length >= self.trading_mode.general_settings.max_bars_back:
+            if self.ctx.exchange_manager.is_backtesting:
+                return self.trading_mode.general_settings.max_bars_back
             return cutted_data_length - self.trading_mode.general_settings.max_bars_back
         else:
             self.logger.warning(
@@ -1866,7 +1866,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
 
     async def _trade_cached_backtesting_candles_if_available(self, ctx) -> bool:
         if ctx.exchange_manager.is_backtesting:
-            if self.start_long_trades_cache:
+            if self.start_long_trades_cache is not None:
                 trigger_cache_timestamp = int(ctx.trigger_cache_timestamp)
                 try:
                     if self.start_short_trades_cache[trigger_cache_timestamp]:
