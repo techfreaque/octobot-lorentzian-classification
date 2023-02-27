@@ -97,12 +97,12 @@ class MatrixModeProducer(AbstractBaseModeProducer):
 
     def allow_trading_only_on_execution(self, ctx, allow_trading_without_action=False):
         if not self.exchange_manager.is_backtesting:
-            if self.action in (
-                matrix_enums.TradingModeCommands.EXECUTE,
+            if self.action in (matrix_enums.TradingModeCommands.EXECUTE,):
+                ctx.enable_trading = True
+            elif self.action in (
+                matrix_enums.TradingModeCommands.OHLC_CALLBACK,
                 matrix_enums.TradingModeCommands.KLINE_CALLBACK,
             ):
-                ctx.enable_trading = True
-            elif self.action in (matrix_enums.TradingModeCommands.OHLC_CALLBACK,):
                 ctx.enable_trading = True
                 self.disable_trading_if_just_started()
             else:

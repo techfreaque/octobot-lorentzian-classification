@@ -75,87 +75,95 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Max Bars Back",
                 parent_input_name=self.GENERAL_SETTINGS_NAME,
             ),
-            color_compression=self.UI.user_input(
-                "color_compression",
-                enums.UserInputTypes.INT,
-                1,
+            color_compression=1,
+            # color_compression=self.UI.user_input(
+            #     "color_compression",
+            #     enums.UserInputTypes.INT,
+            #     1,
+            #     inputs,
+            #     min_val=1,
+            #     max_val=10,
+            #     title="Color Compression",
+            #     parent_input_name=self.GENERAL_SETTINGS_NAME,
+            #     other_schema_values={
+            #         "description": "Compression factor for adjusting the "
+            #         "intensity of the color scale."
+            #     },
+            # ),
+            exit_type=self.UI.user_input(
+                "exit_type",
+                enums.UserInputTypes.OPTIONS,
+                utils.ExitTypes.SWITCH_SIDES,
                 inputs,
-                min_val=1,
-                max_val=10,
-                title="Color Compression",
+                options=[
+                    utils.ExitTypes.FOUR_BARS,
+                    # utils.ExitTypes.DYNAMIC,
+                    utils.ExitTypes.SWITCH_SIDES,
+                ],
+                title="Exit Type",
                 parent_input_name=self.GENERAL_SETTINGS_NAME,
                 other_schema_values={
-                    "description": "Compression factor for adjusting the "
-                    "intensity of the color scale."
+                    "description": "Four bars: Exits will occour exactly 4 bars "
+                    "after the entry. - "
+                    "Dynamic: attempts to let profits ride by dynamically adjusting "
+                    "the exit threshold based on kernel regression logic. - "
+                    "Switch sides: The position will switch sides on each signal.",
                 },
             ),
-            show_default_exits=self.UI.user_input(
-                "show_default_exits",
-                enums.UserInputTypes.BOOLEAN,
-                False,
-                inputs,
-                title="Show Default Exits",
-                parent_input_name=self.GENERAL_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Default exits occur exactly 4 bars after an entry "
-                    "signal. This corresponds to the predefined length of a trade "
-                    "during the model's training process."
-                },
-            ),
-            use_dynamic_exits=self.UI.user_input(
-                "use_dynamic_exits",
-                enums.UserInputTypes.BOOLEAN,
-                False,
-                inputs,
-                title="Use Dynamic Exits",
-                parent_input_name=self.GENERAL_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Dynamic exits attempt to let profits ride by "
-                    "dynamically adjusting the exit threshold based "
-                    "on kernel regression logic."
-                },
-            ),
+            # use_dynamic_exits=self.UI.user_input(
+            #     "use_dynamic_exits",
+            #     enums.UserInputTypes.BOOLEAN,
+            #     False,
+            #     inputs,
+            #     title="Use Dynamic Exits",
+            #     parent_input_name=self.GENERAL_SETTINGS_NAME,
+            #     other_schema_values={
+            #         "description": "Dynamic exits attempt to let profits ride by "
+            #         "dynamically adjusting the exit threshold based "
+            #         "on kernel regression logic."
+            #     },
+            # ),
         )
         # Trade Stats Settings
         # Note: The trade stats section is NOT intended to be used as a replacement for
         # proper backtesting. It is intended to be used for calibration purposes only.
-        self.show_trade_stats = self.UI.user_input(
-            "show_trade_stats",
-            enums.UserInputTypes.BOOLEAN,
-            True,
-            inputs,
-            title="Show Trade Stats",
-            parent_input_name=self.GENERAL_SETTINGS_NAME,
-            other_schema_values={
-                "description": "Displays the trade stats for a given configuration. "
-                "Useful for optimizing the settings in the Feature Engineering section."
-                " This should NOT replace backtesting and should be used for "
-                "calibration purposes only. Early Signal Flips represent instances "
-                "where the model changes signals before 4 bars elapses; high values can"
-                " indicate choppy (ranging) market conditions."
-            },
-        )
-        self.use_worst_case_estimates = self.UI.user_input(
-            "use_worst_case_estimates",
-            enums.UserInputTypes.BOOLEAN,
-            False,
-            inputs,
-            title="Use Worst Case Estimates",
-            parent_input_name=self.GENERAL_SETTINGS_NAME,
-            other_schema_values={
-                "description": "Whether to use the worst case scenario for backtesting."
-                " This option can be useful for creating a conservative estimate that "
-                "is based on close prices only, thus avoiding the effects of intrabar "
-                "repainting. This option assumes that the user does not enter when the "
-                "signal first appears and instead waits for the bar to close as "
-                "confirmation. On larger timeframes, this can mean entering after a "
-                "large move has already occurred. Leaving this option disabled is "
-                "generally better for those that use this indicator as a source of "
-                "confluence and prefer estimates that demonstrate discretionary "
-                "mid-bar entries. Leaving this option enabled may be more consistent "
-                "with traditional backtesting results."
-            },
-        )
+        # self.show_trade_stats = self.UI.user_input(
+        #     "show_trade_stats",
+        #     enums.UserInputTypes.BOOLEAN,
+        #     True,
+        #     inputs,
+        #     title="Show Trade Stats",
+        #     parent_input_name=self.GENERAL_SETTINGS_NAME,
+        #     other_schema_values={
+        #         "description": "Displays the trade stats for a given configuration. "
+        #         "Useful for optimizing the settings in the Feature Engineering section."
+        #         " This should NOT replace backtesting and should be used for "
+        #         "calibration purposes only. Early Signal Flips represent instances "
+        #         "where the model changes signals before 4 bars elapses; high values can"
+        #         " indicate choppy (ranging) market conditions."
+        #     },
+        # )
+        # self.use_worst_case_estimates = self.UI.user_input(
+        #     "use_worst_case_estimates",
+        #     enums.UserInputTypes.BOOLEAN,
+        #     False,
+        #     inputs,
+        #     title="Use Worst Case Estimates",
+        #     parent_input_name=self.GENERAL_SETTINGS_NAME,
+        #     other_schema_values={
+        #         "description": "Whether to use the worst case scenario for backtesting."
+        #         " This option can be useful for creating a conservative estimate that "
+        #         "is based on close prices only, thus avoiding the effects of intrabar "
+        #         "repainting. This option assumes that the user does not enter when the "
+        #         "signal first appears and instead waits for the bar to close as "
+        #         "confirmation. On larger timeframes, this can mean entering after a "
+        #         "large move has already occurred. Leaving this option disabled is "
+        #         "generally better for those that use this indicator as a source of "
+        #         "confluence and prefer estimates that demonstrate discretionary "
+        #         "mid-bar entries. Leaving this option enabled may be more consistent "
+        #         "with traditional backtesting results."
+        #     },
+        # )
 
     def _init_feature_engineering_settings(self, inputs: dict) -> None:
         # Feature Variables: User-Defined Inputs for calculating Feature Series.
@@ -446,19 +454,20 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Display Settings",
         )
         self.display_settings: utils.DisplaySettings = utils.DisplaySettings(
-            show_bar_colors=self.UI.user_input(
-                "show_bar_colors",
-                enums.UserInputTypes.BOOLEAN,
-                True,
-                inputs,
-                title="Show Bar Colors",
-                parent_input_name=self.DISPLAY_SETTINGS_NAME,
-                other_schema_values={"description": "Whether to show the bar colors."},
-            ),
+            show_bar_colors=False,
+            # show_bar_colors=self.UI.user_input(
+            #     "show_bar_colors",
+            #     enums.UserInputTypes.BOOLEAN,
+            #     True,
+            #     inputs,
+            #     title="Show Bar Colors",
+            #     parent_input_name=self.DISPLAY_SETTINGS_NAME,
+            #     other_schema_values={"description": "Whether to show the bar colors."},
+            # ),
             show_bar_predictions=self.UI.user_input(
                 "show_bar_predictions",
                 enums.UserInputTypes.BOOLEAN,
-                True,
+                False,
                 inputs,
                 title="Show Bar Prediction Values",
                 parent_input_name=self.DISPLAY_SETTINGS_NAME,
@@ -467,32 +476,34 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "of each bar as an integer."
                 },
             ),
-            use_atr_offset=self.UI.user_input(
-                "use_atr_offset",
-                enums.UserInputTypes.BOOLEAN,
-                False,
-                inputs,
-                title="Use ATR Offset",
-                parent_input_name=self.DISPLAY_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Will use the ATR offset instead of "
-                    "the bar prediction offset."
-                },
-            ),
-            bar_predictions_offset=self.UI.user_input(
-                "bar_predictions_offset",
-                enums.UserInputTypes.FLOAT,
-                8,
-                inputs,
-                min_val=0,
-                max_val=100,
-                title="Bar Prediction Offset",
-                parent_input_name=self.DISPLAY_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "The offset of the bar predictions as a percentage "
-                    "from the bar high or close."
-                },
-            ),
+            bar_predictions_offset=8,
+            # bar_predictions_offset=self.UI.user_input(
+            #     "bar_predictions_offset",
+            #     enums.UserInputTypes.FLOAT,
+            #     8,
+            #     inputs,
+            #     min_val=0,
+            #     max_val=100,
+            #     title="Bar Prediction Offset",
+            #     parent_input_name=self.DISPLAY_SETTINGS_NAME,
+            #     other_schema_values={
+            #         "description": "The offset of the bar predictions as a percentage "
+            #         "from the bar high or close."
+            #     },
+            # ),
+            use_atr_offset=False,
+            # use_atr_offset=self.UI.user_input(
+            #     "use_atr_offset",
+            #     enums.UserInputTypes.BOOLEAN,
+            #     False,
+            #     inputs,
+            #     title="Use ATR Offset",
+            #     parent_input_name=self.DISPLAY_SETTINGS_NAME,
+            #     other_schema_values={
+            #         "description": "Will use the ATR offset instead of "
+            #         "the bar prediction offset."
+            #     },
+            # ),
             enable_additional_plots=self.UI.user_input(
                 "enable_additional_plots",
                 enums.UserInputTypes.BOOLEAN,
@@ -614,14 +625,22 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Filter Settings",
         )
-
+        volatility_filter_name = "volatility_filter_settings"
+        self.UI.user_input(
+            volatility_filter_name,
+            enums.UserInputTypes.OBJECT,
+            None,
+            inputs,
+            title="Volatility Filter Settings",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+        )
         use_volatility_filter = self.UI.user_input(
             "use_volatility_filter",
             enums.UserInputTypes.BOOLEAN,
             True,
             inputs,
             title="Use Volatility Filter",
-            parent_input_name=self.FILTER_SETTINGS_NAME,
+            parent_input_name=volatility_filter_name,
             other_schema_values={
                 "description": "Whether to use the volatility filter."
             },
@@ -634,17 +653,28 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 False,
                 inputs,
                 title="Plot Volatility Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
+                parent_input_name=volatility_filter_name,
             )
+
+        regime_filter_name = "regime_filter_settings"
+        self.UI.user_input(
+            regime_filter_name,
+            enums.UserInputTypes.OBJECT,
+            None,
+            inputs,
+            title="Regime Filter Settings",
+            parent_input_name=self.FILTER_SETTINGS_NAME,
+        )
         use_regime_filter = self.UI.user_input(
             "use_regime_filter",
             enums.UserInputTypes.BOOLEAN,
             True,
             inputs,
             title="Use Regime Filter",
-            parent_input_name=self.FILTER_SETTINGS_NAME,
+            parent_input_name=regime_filter_name,
         )
         plot_regime_filter = False
+        regime_threshold = None
         if use_regime_filter:
             plot_regime_filter = self.UI.user_input(
                 "plot_regime_filter",
@@ -652,21 +682,31 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 False,
                 inputs,
                 title="Plot Regime Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
+                parent_input_name=regime_filter_name,
             )
-        regime_threshold = self.UI.user_input(
-            "regime_threshold",
-            enums.UserInputTypes.FLOAT,
-            -0.1,
+            regime_threshold = self.UI.user_input(
+                "regime_threshold",
+                enums.UserInputTypes.FLOAT,
+                -0.1,
+                inputs,
+                min_val=-10,
+                max_val=10,
+                title="Regime Threshold",
+                parent_input_name=regime_filter_name,
+                other_schema_values={
+                    "description": "Whether to use the trend detection filter. "
+                    "Threshold for detecting Trending/Ranging markets. Use steps of 0.1"
+                },
+            )
+
+        adx_filter_name = "adx_filter_settings"
+        self.UI.user_input(
+            adx_filter_name,
+            enums.UserInputTypes.OBJECT,
+            None,
             inputs,
-            min_val=-10,
-            max_val=10,
-            title="Regime Threshold",
+            title="ADX Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
-            other_schema_values={
-                "description": "Whether to use the trend detection filter. "
-                "Threshold for detecting Trending/Ranging markets. Use steps of 0.1"
-            },
         )
         use_adx_filter = self.UI.user_input(
             "use_adx_filter",
@@ -674,9 +714,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             False,
             inputs,
             title="Use ADX Filter",
-            parent_input_name=self.FILTER_SETTINGS_NAME,
+            parent_input_name=adx_filter_name,
         )
         plot_adx_filter = False
+        adx_threshold = None
         if use_adx_filter:
             plot_adx_filter = self.UI.user_input(
                 "plot_adx_filter",
@@ -684,21 +725,30 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 False,
                 inputs,
                 title="Plot EMA Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
+                parent_input_name=adx_filter_name,
             )
-        adx_threshold = self.UI.user_input(
-            "adx_threshold",
-            enums.UserInputTypes.INT,
-            20,
+            adx_threshold = self.UI.user_input(
+                "adx_threshold",
+                enums.UserInputTypes.INT,
+                20,
+                inputs,
+                min_val=0,
+                max_val=100,
+                title="ADX Threshold",
+                parent_input_name=adx_filter_name,
+                other_schema_values={
+                    "description": "Whether to use the ADX filter. "
+                    "Threshold for detecting Trending/Ranging markets."
+                },
+            )
+        ema_filter_name = "ema_filter_settings"
+        self.UI.user_input(
+            ema_filter_name,
+            enums.UserInputTypes.OBJECT,
+            None,
             inputs,
-            min_val=0,
-            max_val=100,
-            title="ADX Threshold",
+            title="EMA Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
-            other_schema_values={
-                "description": "Whether to use the ADX filter. "
-                "Threshold for detecting Trending/Ranging markets."
-            },
         )
         use_ema_filter = self.UI.user_input(
             "use_ema_filter",
@@ -706,9 +756,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             False,
             inputs,
             title="Use EMA Filter",
-            parent_input_name=self.FILTER_SETTINGS_NAME,
+            parent_input_name=ema_filter_name,
         )
         plot_ema_filter = False
+        ema_period = None
         if use_ema_filter:
             plot_ema_filter = self.UI.user_input(
                 "plot_ema_filter",
@@ -716,20 +767,29 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 False,
                 inputs,
                 title="Plot EMA Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
+                parent_input_name=ema_filter_name,
             )
 
-        ema_period = self.UI.user_input(
-            "ema_period",
-            enums.UserInputTypes.INT,
-            200,
+            ema_period = self.UI.user_input(
+                "ema_period",
+                enums.UserInputTypes.INT,
+                200,
+                inputs,
+                min_val=1,
+                title="EMA Period",
+                parent_input_name=ema_filter_name,
+                other_schema_values={
+                    "description": "The period of the EMA used for the EMA Filter."
+                },
+            )
+        sma_filter_name = "sma_filter_settings"
+        self.UI.user_input(
+            sma_filter_name,
+            enums.UserInputTypes.OBJECT,
+            None,
             inputs,
-            min_val=1,
-            title="EMA Period",
+            title="SMA Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
-            other_schema_values={
-                "description": "The period of the EMA used for the EMA Filter."
-            },
         )
         use_sma_filter = self.UI.user_input(
             "use_sma_filter",
@@ -737,9 +797,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             False,
             inputs,
             title="Use SMA Filter",
-            parent_input_name=self.FILTER_SETTINGS_NAME,
+            parent_input_name=sma_filter_name,
         )
         plot_sma_filter = False
+        sma_period = None
         if use_sma_filter:
             plot_sma_filter = self.UI.user_input(
                 "plot_sma_filter",
@@ -747,20 +808,20 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 False,
                 inputs,
                 title="Plot SMA Filter",
-                parent_input_name=self.FILTER_SETTINGS_NAME,
+                parent_input_name=sma_filter_name,
             )
-        sma_period = self.UI.user_input(
-            "sma_period",
-            enums.UserInputTypes.INT,
-            200,
-            inputs,
-            min_val=1,
-            title="SMA Period",
-            parent_input_name=self.FILTER_SETTINGS_NAME,
-            other_schema_values={
-                "description": "The period of the SMA used for the SMA Filter."
-            },
-        )
+            sma_period = self.UI.user_input(
+                "sma_period",
+                enums.UserInputTypes.INT,
+                200,
+                inputs,
+                min_val=1,
+                title="SMA Period",
+                parent_input_name=sma_filter_name,
+                other_schema_values={
+                    "description": "The period of the SMA used for the SMA Filter."
+                },
+            )
 
         self.filter_settings: utils.FilterSettings = utils.FilterSettings(
             use_volatility_filter=use_volatility_filter,

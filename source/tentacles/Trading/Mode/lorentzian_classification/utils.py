@@ -25,15 +25,15 @@ class Settings:
         neighbors_count: int,
         max_bars_back: int,
         color_compression: int,
-        show_default_exits: bool,
-        use_dynamic_exits: bool,
+        # use_dynamic_exits: bool,
+        exit_type: str,
     ):
         self.source: float = source
         self.neighbors_count: int = neighbors_count
         self.max_bars_back: int = max_bars_back
         self.color_compression: int = color_compression
-        self.show_default_exits: bool = show_default_exits
-        self.use_dynamic_exits: bool = use_dynamic_exits
+        # self.use_dynamic_exits: bool = use_dynamic_exits
+        self.exit_type: str = exit_type
 
 
 class SignalDirection:
@@ -278,3 +278,9 @@ def calculate_rma(src, length):
             sma[index] if rma[-1] else (src[index] * alpha) + ((1 - alpha) * rma[-1])
         )
     return numpy.array(rma)
+
+
+class ExitTypes:
+    FOUR_BARS = "exit after 4 bars"
+    # DYNAMIC = "dynamic exit"
+    SWITCH_SIDES = "switch sides on exits / entries"

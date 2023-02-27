@@ -200,7 +200,7 @@ def filter_volatility(
     use_volatility_filter: bool = True,
 ) -> npt.NDArray[numpy.bool_]:
     if not use_volatility_filter:
-        return numpy.array([True] * len(candle_closes))
+        return numpy.array([True] * len(candle_closes)), None, None
     recentAtr = tulipy.atr(candle_highs, candle_lows, candle_closes, min_length)
     historicalAtr = tulipy.atr(candle_highs, candle_lows, candle_closes, max_length)
     recentAtr, historicalAtr = basic_utils.cut_data_to_same_len(
