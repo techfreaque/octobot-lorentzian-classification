@@ -51,8 +51,8 @@ class TimeFrameStrategyEvaluator(evaluators.StrategyEvaluator):
                 "The lower this value is, the faster each bar will get executed!"
             },
         )
-        # TODO replace with common_constants.CONFIG_TENTACLES_BACKTESTING_REQUIRED_CANDLES_COUNT
-        self.specific_config["backtesting_required_candles_count"] = 200
+        # # TODO replace with common_constants.CONFIG_TENTACLES_BACKTESTING_REQUIRED_CANDLES_COUNT
+        # self.specific_config["backtesting_required_candles_count"] = 200
 
     def get_full_cycle_evaluator_types(self) -> tuple:
         return []
