@@ -74,6 +74,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 min_val=1,
                 title="Max Bars Back",
                 parent_input_name=self.GENERAL_SETTINGS_NAME,
+                other_schema_values={
+                    "description": 'Make sure the "Amount of historical live candles" in '
+                    "the TimeframeStrategy is at least 200 bars more than this value"
+                },
             ),
             color_compression=1,
             # color_compression=self.UI.user_input(

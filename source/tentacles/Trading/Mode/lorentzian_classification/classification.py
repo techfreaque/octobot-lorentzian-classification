@@ -113,6 +113,7 @@ import tulipy
 import octobot_commons.enums as enums
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords.context_management as context_management
+import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_settings as backtesting_settings
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 from tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order import (
@@ -1855,9 +1856,9 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                 )
                 candle_times_to_whitelist.append(candle_time)
                 candle_times_to_whitelist.append(open_time)
-        # backtesting_settings.register_backtesting_timestamp_whitelist(
-        #     ctx, list(set(candle_times_to_whitelist))
-        # )
+        backtesting_settings.register_backtesting_timestamp_whitelist(
+            ctx, list(set(candle_times_to_whitelist))
+        )
         basic_utilities.end_measure_time(
             s_time,
             f" Lorentzian Classification - building strategy for "
