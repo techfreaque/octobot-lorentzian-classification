@@ -1,5 +1,7 @@
 import time
 
+from octobot_commons.logging.logging_util import get_logger
+
 
 def start_measure_time(message=None):
     if message:
@@ -22,20 +24,20 @@ def end_measure_live_time(ctx, m_time, message, min_duration=None):
 class NanoContext:
     def __init__(self, exchange_manager, symbol):
         self.exchange_manager = exchange_manager
-        self.symbol = symbol
+        self.symbol: str = symbol
         self.trader = exchange_manager.trader
+        self.enable_trading: bool = True
+        self.just_created_orders: list = []
+        self.allow_artificial_orders: bool = False
+        self.plot_orders: bool = False
+        self.logger = get_logger("NanoContext")
 
     def is_trading_signal_emitter(self):
         return False
 
 
 def get_nano_context(exchange_manager, symbol):
-    exchange_manager.nano_ctx = (
-        exchange_manager.nano_ctx
-        if hasattr(exchange_manager, "nano_ctx")
-        else NanoContext(exchange_manager=exchange_manager, symbol=symbol)
-    )
-    return exchange_manager.nano_ctx
+    return NanoContext(exchange_manager=exchange_manager, symbol=symbol)
 
 
 def get_pre_order_data(exchange_manager, symbol):

@@ -1,21 +1,15 @@
 import time
 from octobot_services import interfaces
-import octobot_trading.util as util
 import octobot_commons.enums as commons_enums
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords.context_management as context_management
-import octobot_trading.modes.script_keywords.basic_keywords.user_inputs as user_inputs
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.matrix_enums as matrix_enums
-from tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_mode_base import (
-    AbstractBaseModeProducer,
-)
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as utilities
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.user_inputs2.select_time_frame as select_time_frame
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 
 
-class MatrixModeProducer(AbstractBaseModeProducer):
+class MatrixProducerBase:
 
     action: str = None
 
@@ -54,29 +48,10 @@ class MatrixModeProducer(AbstractBaseModeProducer):
     trigger_time_frames: list = None
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
-        super().__init__(channel, config, trading_mode, exchange_manager)
         self.candles_manager: dict = {}
         self.ctx: context_management.Context = None
         self.candles: dict = {}
 
-    async def _register_and_apply_required_user_inputs(self, context):
-        if self.trading_mode.ALLOW_CUSTOM_TRIGGER_SOURCE:
-            # register activating topics user input
-            activation_topic_values = [
-                commons_enums.ActivationTopics.FULL_CANDLES.value,
-                commons_enums.ActivationTopics.IN_CONSTRUCTION_CANDLES.value,
-            ]
-            await user_inputs.get_activation_topics(
-                context,
-                commons_enums.ActivationTopics.FULL_CANDLES.value,
-                activation_topic_values,
-            )
-        if context.exchange_manager.is_future:
-            await util.wait_for_topic_init(
-                self.exchange_manager,
-                self.CONFIG_INIT_TIMEOUT,
-                commons_enums.InitializationEventExchangeTopics.CONTRACTS.value,
-            )
 
     async def handle_trigger_time_frame(self):
         self.trigger_time_frames = await select_time_frame.set_trigger_time_frames(
@@ -120,31 +95,6 @@ class MatrixModeProducer(AbstractBaseModeProducer):
             except Exception as e:
                 # not important
                 pass
-
-    async def build_and_trade_strategies_live(self):
-        m_time = utilities.start_measure_time()
-
-        utilities.end_measure_live_time(self.ctx, m_time, " matrix mode - live trading")
-
-    async def build_strategies_backtesting_cache(self):
-        s_time = utilities.start_measure_time(
-            " matrix mode - building backtesting cache"
-        )
-
-        utilities.end_measure_time(
-            s_time,
-            f" matrix mode - building strategy for "
-            f"{self.ctx.time_frame} {len(self.any_trading_timestamps)} trades",
-        )
-
-    async def trade_strategies_backtesting(self):
-        m_time = utilities.start_measure_time()
-
-        utilities.end_measure_time(
-            m_time,
-            " matrix mode - warning backtesting candle took longer than expected",
-            min_duration=1,
-        )
 
     async def init_plot_settings(self):
         await basic_keywords.user_input(

@@ -251,11 +251,9 @@ def calculate_rma(
     alpha = 1 / length
     sma = tulipy.sma(src, length)[50:]  # cut first data as its not very accurate
     src, sma = basic_utils.cut_data_to_same_len((src, sma))
-    rma: typing.List[float] = [0]
-    for index in range(0, len(src)):
-        rma.append(
-            sma[index] if rma[-1] else (src[index] * alpha) + ((1 - alpha) * rma[-1])
-        )
+    rma: typing.List[float] = [sma[0]]
+    for index in range(1, len(src)):
+        rma.append((src[index] * alpha) + ((1 - alpha) * rma[-1]))
     return numpy.array(rma)
 
 

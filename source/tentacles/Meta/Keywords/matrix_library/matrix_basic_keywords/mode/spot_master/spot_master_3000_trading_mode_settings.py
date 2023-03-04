@@ -3,13 +3,17 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_trading.modes.script_keywords.basic_keywords.user_inputs as user_inputs
 import octobot_trading.api.symbol_data as symbol_data
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.trading_mode as trading_mode_basis
+import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_producer_base as abstract_producer_base
+import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.producer_base as producer_base
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.matrix_enums as matrix_enums
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.spot_master.spot_master_enums as spot_master_enums
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 
 
-class SpotMaster3000ModeSettings(trading_mode_basis.MatrixModeProducer):
+class SpotMaster3000ModeSettings(
+    abstract_producer_base.AbstractBaseModeProducer,
+    producer_base.MatrixProducerBase,
+):
     target_settings: dict = {}
     coins_to_trade: typing.List[str] = []
     ref_market: str = None
@@ -36,6 +40,14 @@ class SpotMaster3000ModeSettings(trading_mode_basis.MatrixModeProducer):
         matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value,
     ]
     live_plotting_mode: str = matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value
+
+    def __init__(self, channel, config, trading_mode, exchange_manager):
+        abstract_producer_base.AbstractBaseModeProducer.__init__(
+            self, channel, config, trading_mode, exchange_manager
+        )
+        producer_base.MatrixProducerBase.__init__(
+            self, channel, config, trading_mode, exchange_manager
+        )
 
     async def init_spot_master_settings(self, ctx) -> None:
         self.set_available_coins_and_symbols()
@@ -195,7 +207,8 @@ class SpotMaster3000ModeSettings(trading_mode_basis.MatrixModeProducer):
                     parent_input_name=coin_selector_allocation_name,
                     other_schema_values={
                         "grid_columns": 4,
-                        "description": f"Define the optimal amount in percent to hold of {coin}",
+                        "description": "Define the optimal amount in percent "
+                        f"to hold of {coin}",
                     },
                 ),
             }

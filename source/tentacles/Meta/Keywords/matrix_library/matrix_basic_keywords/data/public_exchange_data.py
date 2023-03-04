@@ -78,31 +78,44 @@ async def get_candles_(maker, source_name="close", time_frame=None, symbol=None)
     return maker.candles[symbol][time_frame][source_name]
 
 
+async def get_candle_from_time(
+    maker,
+    timestamp: int or float,
+    source_name="close",
+    time_frame: str = None,
+    symbol: str = None,
+):
+    times = await get_candles_(
+        maker, source_name="time", time_frame=time_frame, symbol=symbol
+    )
+    candles = await get_candles_(
+        maker, source_name=source_name, time_frame=time_frame, symbol=symbol
+    )
+    try:
+        if isinstance(candles, numpy.ndarray):
+            current_index = numpy.where(numpy.isclose(times, timestamp))[0][0]
+        else:
+            current_index = times.index(timestamp)
+    except (ValueError, KeyError, IndexError) as error:
+        raise ValueError(
+            f"No price for candle {source_name} (time: {timestamp} - "
+            f"{symbol} - {time_frame})"
+        ) from error
+    return candles[current_index]
+
+
 async def get_current_candle(
     maker, source_name="close", time_frame=None, symbol=None
 ) -> float:
     symbol = symbol or maker.ctx.symbol
     time_frame = time_frame or maker.ctx.time_frame
     if maker.ctx.exchange_manager.is_backtesting:
-        times = await get_candles_(
-            maker, source_name="time", time_frame=time_frame, symbol=symbol
+        return await get_candle_from_time(
+            timestamp=maker.ctx.trigger_value[0],
+            source_name=source_name,
+            time_frame=time_frame,
+            symbol=symbol,
         )
-        candles = await get_candles_(
-            maker, source_name=source_name, time_frame=time_frame, symbol=symbol
-        )
-        try:
-            if isinstance(candles, numpy.ndarray):
-                current_index = numpy.where(
-                    numpy.isclose(times, maker.ctx.trigger_value[0])
-                )[0][0]
-            else:
-                current_index = times.index(maker.ctx.trigger_value[0])
-        except (ValueError, KeyError, IndexError) as error:
-            raise ValueError(
-                f"Price for the candle (time: {maker.ctx.trigger_value[0]}, "
-                f"{symbol}, {time_frame})"
-            ) from error
-        return candles[current_index]
     if source_name == "close":
         return await exchange_public_data.current_candle_price(
             maker.ctx, symbol=symbol, time_frame=time_frame

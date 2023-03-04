@@ -116,17 +116,16 @@ import octobot_trading.modes.script_keywords.context_management as context_manag
 import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_settings as backtesting_settings
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
-from tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order import (
-    market,
-)
+import tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order as market_order
 
 import tentacles.Trading.Mode.lorentzian_classification.kernel_functions.kernel as kernel
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 import tentacles.Trading.Mode.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
 
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utilities
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.trading_mode as trading_mode_basis
 import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.plottings.plots as matrix_plots
+import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_producer_base as abstract_producer_base
+import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.producer_base as producer_base
 
 try:
     from tentacles.Evaluator.Util.candles_util import CandlesUtil
@@ -143,7 +142,18 @@ activate_managed_order = None
 all_settings = None
 
 
-class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
+class LorentzianClassificationScript(
+    abstract_producer_base.AbstractBaseModeProducer,
+    producer_base.MatrixProducerBase,
+):
+    def __init__(self, channel, config, trading_mode, exchange_manager):
+        abstract_producer_base.AbstractBaseModeProducer.__init__(
+            self, channel, config, trading_mode, exchange_manager
+        )
+        producer_base.MatrixProducerBase.__init__(
+            self, channel, config, trading_mode, exchange_manager
+        )
+
     if managed_orders:
         managend_orders_long_settings: all_settings.ManagedOrdersSettings = None
         managend_orders_short_settings: all_settings.ManagedOrdersSettings = None
@@ -215,7 +225,8 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
         # TOD remove when RMA is accurate
         rma = utils.calculate_rma(candle_closes, 15)
 
-        # cut all historical data to same length for numpy and loop indizies being aligned
+        # cut all historical data to same length
+        # for numpy and loop indizies being aligned
         (
             y_train_series,
             _filters.filter_all,
@@ -1940,7 +1951,7 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                 orders_settings=self.managend_orders_short_settings,
             )
         else:
-            await market(self.ctx, side="sell", amount="90%a")
+            await market_order.market(self.ctx, side="sell", amount="90%a")
 
     async def enter_long_trade(self):
         if managed_orders:
@@ -1950,10 +1961,14 @@ class LorentzianClassificationScript(trading_mode_basis.MatrixModeProducer):
                 orders_settings=self.managend_orders_long_settings,
             )
         else:
-            await market(self.ctx, side="buy", amount="90%a")
+            await market_order.market(self.ctx, side="buy", amount="90%a")
 
     async def exit_short_trade(self):
-        await market(self.ctx, side="buy", amount="100%a", reduce_only=True)
+        await market_order.market(
+            self.ctx, side="buy", amount="100%a", reduce_only=True
+        )
 
     async def exit_long_trade(self):
-        await market(self.ctx, side="sell", amount="100%a", reduce_only=True)
+        await market_order.market(
+            self.ctx, side="sell", amount="100%a", reduce_only=True
+        )
