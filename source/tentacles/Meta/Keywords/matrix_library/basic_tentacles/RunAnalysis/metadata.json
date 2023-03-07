@@ -1,0 +1,6 @@
+{
+  "version": "1.0.1",
+  "origin_package": "Matrix-Basic-Tentacles",
+  "tentacles": ["RunAnalysis"],
+  "tentacles-requirements": []
+}

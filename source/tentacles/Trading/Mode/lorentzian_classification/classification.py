@@ -122,10 +122,10 @@ import tentacles.Trading.Mode.lorentzian_classification.kernel_functions.kernel 
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 import tentacles.Trading.Mode.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
 
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utilities
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.plottings.plots as matrix_plots
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_producer_base as abstract_producer_base
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.producer_base as producer_base
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.plottings.plots as matrix_plots
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_producer_base as abstract_producer_base
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.producer_base as producer_base
 
 try:
     from tentacles.Evaluator.Util.candles_util import CandlesUtil
@@ -133,13 +133,9 @@ except (ModuleNotFoundError, ImportError) as error:
     raise RuntimeError("CandlesUtil tentacle is required to use HLC3") from error
 
 # try:
-#     import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.managed_order_pro.managed_orders as managed_orders
-#     import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.managed_order_pro.activate_managed_order as activate_managed_order
-#     import tentacles.Meta.Keywords.matrix_library.matrix_pro_keywords.managed_order_pro.settings.all_settings as all_settings
+#     import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
 # except (ImportError, ModuleNotFoundError):
-managed_orders = None
 activate_managed_order = None
-all_settings = None
 
 
 class LorentzianClassificationScript(
@@ -154,12 +150,8 @@ class LorentzianClassificationScript(
             self, channel, config, trading_mode, exchange_manager
         )
 
-    if managed_orders:
-        managend_orders_long_settings: all_settings.ManagedOrdersSettings = None
-        managend_orders_short_settings: all_settings.ManagedOrdersSettings = None
-    else:
-        managend_orders_long_settings = None
-        managend_orders_short_settings = None
+    managend_orders_long_settings = None
+    managend_orders_short_settings = None
 
     start_long_trades_cache: dict = None
     start_short_trades_cache: dict = None
@@ -222,9 +214,6 @@ class LorentzianClassificationScript(
             user_selected_candles
         )
 
-        # TOD remove when RMA is accurate
-        rma = utils.calculate_rma(candle_closes, 15)
-
         # cut all historical data to same length
         # for numpy and loop indizies being aligned
         (
@@ -257,7 +246,6 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-            rma,
             recentAtr,
             historicalAtr,
         ) = basic_utilities.cut_data_to_same_len(
@@ -291,7 +279,6 @@ class LorentzianClassificationScript(
                 was_bullish_rates,
                 is_bullish_rates,
                 was_bearish_rates,
-                rma,
                 recentAtr,
                 historicalAtr,
             )
@@ -341,14 +328,8 @@ class LorentzianClassificationScript(
                 alerts_bearish=alerts_bearish,
                 is_bearish_changes=is_bearish_changes,
                 is_bullish_changes=is_bullish_changes,
-                # last_signal,
-                # bars_held,
-                # previous_is_valid_short_exit,
-                # previous_is_valid_long_exit,
                 bars_since_red_entry=bars_since_red_entry,
                 bars_since_green_entry=bars_since_green_entry,
-                # bars_since_red_exit,
-                # bars_since_green_exit,
                 distances=distances,
                 predictions=predictions,
                 last_distances=last_distances,
@@ -401,11 +382,9 @@ class LorentzianClassificationScript(
             was_bullish_rates=was_bullish_rates,
             is_bullish_rates=is_bullish_rates,
             was_bearish_rates=was_bearish_rates,
-            rma=rma,
             recentAtr=recentAtr,
             historicalAtr=historicalAtr,
             historical_predictions=historical_predictions,
-            # distances,
             last_distances=last_distances,
             start_long_trades=start_long_trades,
             start_short_trades=start_short_trades,
@@ -431,14 +410,8 @@ class LorentzianClassificationScript(
         alerts_bearish: npt.NDArray[numpy.bool_],
         is_bearish_changes: npt.NDArray[numpy.bool_],
         is_bullish_changes: npt.NDArray[numpy.bool_],
-        # last_signal,
-        # bars_held: int,
-        # previous_is_valid_short_exit,
-        # previous_is_valid_long_exit,
         bars_since_red_entry: int,
         bars_since_green_entry: int,
-        # bars_since_red_exit: int,
-        # bars_since_green_exit: int,
         distances: list,
         predictions: list,
         last_distances: list,
@@ -938,11 +911,9 @@ class LorentzianClassificationScript(
         was_bullish_rates,
         is_bullish_rates,
         was_bearish_rates,
-        rma,
         recentAtr,
         historicalAtr,
         historical_predictions,
-        # distances,
         last_distances,
         start_long_trades,
         start_short_trades,
@@ -976,7 +947,6 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-            rma,
             recentAtr,
             historicalAtr,
             slightly_below_lows,
@@ -1095,12 +1065,6 @@ class LorentzianClassificationScript(
                 cache_keys=candle_times,
                 value_key="last_distances",
             )
-            # await plotting.plot(
-            #     ctx,
-            #     title="lorentzian_distance_test",
-            #     cache_value="lorentzian_distance_test",
-            #     chart="sub-chart",
-            # )
             await plotting.plot(
                 ctx,
                 title="last_distances",
@@ -1134,7 +1098,6 @@ class LorentzianClassificationScript(
         was_bullish_rates,
         is_bullish_rates,
         was_bearish_rates,
-        rma,
         recentAtr,
         historicalAtr,
         slightly_below_lows,
@@ -1170,7 +1133,6 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-            rma,
             recentAtr,
             historicalAtr,
             slightly_below_lows,
@@ -1206,7 +1168,6 @@ class LorentzianClassificationScript(
                 was_bullish_rates,
                 is_bullish_rates,
                 was_bearish_rates,
-                rma,
                 recentAtr,
                 historicalAtr,
                 slightly_below_lows,
@@ -1360,7 +1321,6 @@ class LorentzianClassificationScript(
                 chart="main-chart",
             )
         if self.trading_mode.display_settings.enable_additional_plots:
-            additional_values_by_key["rma"] = rma
             additional_values_by_key["recentAtr"] = recentAtr
             additional_values_by_key["historicalAtr"] = historicalAtr
             additional_values_by_key["yhat2"] = yhat2
@@ -1393,14 +1353,6 @@ class LorentzianClassificationScript(
                 chart="sub-chart",
                 own_yaxis=True,
             )
-            await plotting.plot(
-                ctx,
-                title="rma",
-                cache_value="rma",
-                chart="sub-chart",
-                own_yaxis=True,
-            )
-
             await matrix_plots.plot_conditional(
                 ctx=ctx,
                 title="is_bearish_rates",
@@ -1944,8 +1896,8 @@ class LorentzianClassificationScript(
             )
 
     async def enter_short_trade(self):
-        if managed_orders:
-            await managed_orders.managed_order(
+        if activate_managed_order:
+            await activate_managed_order.managed_order(
                 self,
                 trading_side="short",
                 orders_settings=self.managend_orders_short_settings,
@@ -1954,8 +1906,8 @@ class LorentzianClassificationScript(
             await market_order.market(self.ctx, side="sell", amount="90%a")
 
     async def enter_long_trade(self):
-        if managed_orders:
-            await managed_orders.managed_order(
+        if activate_managed_order:
+            await activate_managed_order.managed_order(
                 self,
                 trading_side="long",
                 orders_settings=self.managend_orders_long_settings,

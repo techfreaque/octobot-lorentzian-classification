@@ -1,9 +1,8 @@
 import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
-from tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.matrix_enums import (
-    TradingModeCommands,
-)
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
+
 import tentacles.Trading.Mode.lorentzian_classification.classification as classification
 import tentacles.Trading.Mode.lorentzian_classification.settings as settings
 
@@ -50,7 +49,7 @@ class LorentzianClassificationMode(settings.LorentzianClassificationModeInputs):
 class LorentzianClassificationProducer(classification.LorentzianClassificationScript):
     async def make_strategy(self, ctx: context_management.Context, action: str):
         self.action = action
-        if TradingModeCommands.INIT_CALL != action:
+        if matrix_enums.TradingModeCommands.INIT_CALL != action:
             self.allow_trading_only_on_execution(ctx)
             await self.evaluate_lorentzian_classification(
                 ctx=ctx,

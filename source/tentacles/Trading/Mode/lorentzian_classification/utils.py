@@ -4,7 +4,7 @@ import numpy.typing as npt
 import numpy
 import tulipy
 import tentacles.Trading.Mode.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utils
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utils
 
 
 def series_from(

@@ -1,0 +1,6 @@
+{
+  "version": "0.7.0",
+  "origin_package": "Matrix-Basic-Tentacles",
+  "tentacles": ["basic_keywords"],
+  "tentacles-requirements": []
+}

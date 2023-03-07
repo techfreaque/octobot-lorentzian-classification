@@ -1,5 +1,5 @@
 import octobot_commons.enums as enums
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.mode.mode_base.abstract_mode_base as abstract_mode_base
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
 

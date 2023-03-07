@@ -4,7 +4,7 @@ import numpy
 import tulipy
 import numpy.typing as npt
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
-import tentacles.Meta.Keywords.matrix_library.matrix_basic_keywords.tools.utilities as basic_utils
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utils
 
 
 def rescale(
