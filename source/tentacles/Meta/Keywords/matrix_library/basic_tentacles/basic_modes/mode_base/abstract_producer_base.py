@@ -142,7 +142,13 @@ class AbstractBaseModeProducer(
                 hasattr(self.trading_mode, "TRADING_SCRIPT_MODULE")
                 and self.trading_mode.TRADING_SCRIPT_MODULE
             ):
-                await self.trading_mode.get_script(live=True)(context)
+                try:
+                    await self.trading_mode.get_script(live=True)(context)
+                except Exception as e:
+                    self.ctx.logger.info(
+                        "Failed to execution user generated custom trading script"
+                        f"{e}"
+                    )
         except errors.UnreachableExchange:
             raise
         except (commons_errors.MissingDataError, commons_errors.ExecutionAborted) as e:
