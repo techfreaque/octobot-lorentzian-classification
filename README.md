@@ -5,8 +5,9 @@ OctoBot Lorentzian Classification evaluator, based on the trading view indicator
 
 # Still work in progress!
 ## To Do
-* RMA is slightly different as on trading view (probably not a rounding issue)
-* gaussian method returns slightly different as on tradingview (probably rounding issue)
+* <del> RMA is slightly different as on trading view (probably not a rounding issue) </del>
+* <del> gaussian method returns slightly different as on tradingview (probably rounding issue) </del>
+* regime filter isnt working
 * classify_current_candle / prediction is different (probably my implementation is not replicating the original code OR because of differences of available candle data lengths)
 
 
@@ -17,7 +18,7 @@ OctoBot Lorentzian Classification evaluator, based on the trading view indicator
 3. then go to yourOctobotDomain.com:5001/advanced/tentacle_packages - paste the URL for the latest version (see at the bottom) and install it
 
 ## 2. import profile
-*This trading mode will only work with this profile or a copy of it
+* This trading mode will only work with this profile or a copy of it
 
 1. go to my-octobot-url.com/profile
 2. click on any profile
