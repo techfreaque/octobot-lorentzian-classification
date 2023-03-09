@@ -7,8 +7,8 @@ OctoBot Lorentzian Classification evaluator, based on the trading view indicator
 ## To Do
 * <del> RMA is slightly different as on trading view (probably not a rounding issue) </del>
 * <del> gaussian method returns slightly different as on tradingview (probably rounding issue) </del>
-* regime filter isnt working
-* classify_current_candle / prediction is different (probably my implementation is not replicating the original code OR because of differences of available candle data lengths)
+* <del> regime filter isnt working </del>
+* classify_current_candle / prediction is slightly different (probably my implementation is not replicating the original code OR because of differences of available candle data lengths)
 
 
 # installation
