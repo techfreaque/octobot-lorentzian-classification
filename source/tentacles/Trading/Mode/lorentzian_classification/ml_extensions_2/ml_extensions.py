@@ -102,7 +102,6 @@ def n_adx(
             # skip early candles as its division by 0
             dx.append(abs(diPositive - diNegative) / (diPositive + diNegative) * 100)
     dx = numpy.array(dx)
-    # TODO RMA is not the same as on trading view
     adx = utils.calculate_rma(dx, length)
     return rescale(adx, 0, 100, 0, 1)
 
@@ -145,6 +144,7 @@ def regime_filter(
         abs_curve_slope - exponentialAverageAbsCurveSlope
     ) / exponentialAverageAbsCurveSlope
     # Calculate the slope of the curve.
+    
     return normalized_slope_decline >= threshold
 
 

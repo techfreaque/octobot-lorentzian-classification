@@ -113,11 +113,11 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                 )
                 importlib.reload(module)
                 self.register_script_module(module, live=is_live)
+            if is_live:
                 # reload config
                 await self.reload_config(self.exchange_manager.bot_id)
-                if is_live:
-                    # todo cancel and restart live tasks
-                    await self.start_over_database()
+                # todo cancel and restart live tasks
+                await self.start_over_database()
 
     async def start_over_database(self, action: str or dict = None):
         await clear_plotting_cache(self)

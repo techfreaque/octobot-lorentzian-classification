@@ -48,7 +48,13 @@ async def user_select_candle_source_name(
 async def get_candles_(maker, source_name="close", time_frame=None, symbol=None):
     symbol = symbol or maker.ctx.symbol
     time_frame = (
-        time_frame or maker.current_indicator_time_frame or maker.ctx.time_frame
+        time_frame
+        or (
+            maker.current_indicator_time_frame
+            if hasattr(maker, "current_indicator_time_frame")
+            else None
+        )
+        or maker.ctx.time_frame
     )
     try:
         if maker.ctx.exchange_manager.is_backtesting:

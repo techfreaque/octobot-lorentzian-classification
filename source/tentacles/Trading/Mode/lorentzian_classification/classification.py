@@ -179,7 +179,7 @@ class LorentzianClassificationScript(
             candle_source_name=self.trading_mode.general_settings.source,
         )
         data_length = len(candle_highs)
-        _filters, recentAtr, historicalAtr = self._get_all_filters(
+        (_filters, recentAtr, historicalAtr,) = self._get_all_filters(
             candle_closes,
             data_length,
             candles_ohlc4,
@@ -287,6 +287,8 @@ class LorentzianClassificationScript(
         cutted_data_length: int = len(candle_closes)
         max_bars_back_index: int = self._get_max_bars_back_index(cutted_data_length)
 
+        missing_data_length = data_length - cutted_data_length
+
         # =================================
         # ==== Next Bar Classification ====
         # =================================
@@ -307,6 +309,8 @@ class LorentzianClassificationScript(
         start_short_trades: list = []
         exit_short_trades: list = []
         exit_long_trades: list = []
+        is_buy_signals: list = []
+        is_sell_signals: list = []
 
         # TODO remove when _classify_current_candle is accurate
         last_distances: list = []
@@ -337,6 +341,9 @@ class LorentzianClassificationScript(
                 start_short_trades=start_short_trades,
                 exit_short_trades=exit_short_trades,
                 exit_long_trades=exit_long_trades,
+                is_buy_signals=is_buy_signals,
+                is_sell_signals=is_sell_signals,
+                missing_data_length=missing_data_length,
             )
         if ctx.exchange_manager.is_backtesting:
             self._cache_backtesting_signals(
@@ -390,6 +397,9 @@ class LorentzianClassificationScript(
             start_short_trades=start_short_trades,
             exit_short_trades=exit_short_trades,
             exit_long_trades=exit_long_trades,
+            previous_signals=previous_signals,
+            is_buy_signals=is_buy_signals,
+            is_sell_signals=is_sell_signals,
         )
         basic_utilities.end_measure_time(
             s_time,
@@ -419,6 +429,9 @@ class LorentzianClassificationScript(
         start_short_trades: list,
         exit_short_trades: list,
         exit_long_trades: list,
+        is_buy_signals,
+        is_sell_signals,
+        missing_data_length,
     ) -> typing.Tuple[int, int]:
         # =========================
         # ====  Core ML Logic  ====
@@ -495,9 +508,12 @@ class LorentzianClassificationScript(
             len(this_y_train_series) - 1,
         )
         size_Loop: int = min(self.trading_mode.general_settings.max_bars_back - 1, size)
-
-        for candles_back in range(0, size_Loop):
-            candles_back_index = candle_index - size_Loop + candles_back
+        
+        # fix to get same behavir as on tradingview
+        tradingview_loop_size = size_Loop - missing_data_length
+               
+        for candles_back in range(0, tradingview_loop_size):
+            # candles_back_index = candle_index - tradingview_loop_size + candles_back
             lorentzian_distance: float = self.get_lorentzian_distance(
                 candle_index=candle_index,
                 candles_back_index=candles_back,
@@ -542,6 +558,8 @@ class LorentzianClassificationScript(
             exit_long_trades=exit_long_trades,
             bars_since_green_entry=bars_since_green_entry,
             bars_since_red_entry=bars_since_red_entry,
+            is_buy_signals=is_buy_signals,
+            is_sell_signals=is_sell_signals,
         )
         return bars_since_green_entry, bars_since_red_entry
 
@@ -594,6 +612,8 @@ class LorentzianClassificationScript(
         exit_long_trades: list,
         bars_since_green_entry: int,
         bars_since_red_entry: int,
+        is_buy_signals,
+        is_sell_signals,
     ):
         # ============================
         # ==== Prediction Filters ====
@@ -619,10 +639,12 @@ class LorentzianClassificationScript(
         is_buy_signal = (
             signal == utils.SignalDirection.long and _filters.is_uptrend[candle_index]
         )
+        is_buy_signals.append(is_buy_signal)
         is_sell_signal = (
             signal == utils.SignalDirection.short
             and _filters.is_downtrend[candle_index]
         )
+        is_sell_signals.append(is_sell_signal)
 
         is_new_buy_signal = is_buy_signal and is_different_signal_type
         is_new_sell_signal = is_sell_signal and is_different_signal_type
@@ -919,6 +941,9 @@ class LorentzianClassificationScript(
         start_short_trades,
         exit_short_trades,
         exit_long_trades,
+        previous_signals,
+        is_buy_signals,
+        is_sell_signals,
     ):
         slightly_below_lows = candle_lows * 0.999
         slightly_above_highs = candle_highs * 1.001
@@ -963,6 +988,9 @@ class LorentzianClassificationScript(
             exit_long_trades,
             slightly_below_lows,
             slightly_above_highs,
+            previous_signals,
+            is_buy_signals,
+            is_sell_signals,
         )
 
     async def _handle_short_history_plottings(
@@ -977,6 +1005,9 @@ class LorentzianClassificationScript(
         exit_long_trades,
         slightly_below_lows,
         slightly_above_highs,
+        previous_signals,
+        is_buy_signals,
+        is_sell_signals,
     ):
         (
             historical_predictions,
@@ -986,6 +1017,9 @@ class LorentzianClassificationScript(
             start_short_trades,
             slightly_below_lows,
             slightly_above_highs,
+            previous_signals,
+            is_buy_signals,
+            is_sell_signals,
         ) = basic_utilities.cut_data_to_same_len(
             (
                 historical_predictions,
@@ -995,6 +1029,9 @@ class LorentzianClassificationScript(
                 start_short_trades,
                 slightly_below_lows,
                 slightly_above_highs,
+                previous_signals,
+                is_buy_signals,
+                is_sell_signals,
             )
         )
         await matrix_plots.plot_conditional(
@@ -1060,16 +1097,47 @@ class LorentzianClassificationScript(
             )
 
         if self.trading_mode.display_settings.enable_additional_plots:
+            plot_signal_state = True
+            additional_values_by_key = {}
+            if plot_signal_state:
+                await matrix_plots.plot_conditional(
+                    ctx=ctx,
+                    title="is_buy_signals",
+                    signals=is_buy_signals,
+                    values=[1] * len(is_buy_signals),
+                    # values=slightly_below_lows,
+                    times=candle_times,
+                    value_key="is_buy_signals",
+                    chart_location="sub-chart",
+                )
+                await matrix_plots.plot_conditional(
+                    ctx=ctx,
+                    title="is_sell_signals",
+                    signals=is_sell_signals,
+                    values=[-1] * len(is_sell_signals),
+                    # values=slightly_above_highs,
+                    times=candle_times,
+                    value_key="is_sell_signals",
+                    chart_location="sub-chart",
+                )
+                additional_values_by_key["previous_signals"] = previous_signals
+                await plotting.plot(
+                    ctx,
+                    title="Signal State",
+                    cache_value="previous_signals",
+                    chart="sub-chart",
+                )
+                await plotting.plot(
+                    ctx,
+                    title="last_distances",
+                    cache_value="last_distances",
+                    chart="sub-chart",
+                )
             await ctx.set_cached_values(
                 values=last_distances,
                 cache_keys=candle_times,
                 value_key="last_distances",
-            )
-            await plotting.plot(
-                ctx,
-                title="last_distances",
-                cache_value="last_distances",
-                chart="sub-chart",
+                additional_values_by_key=additional_values_by_key,
             )
 
     async def _handle_full_history_plottings(
@@ -1108,6 +1176,9 @@ class LorentzianClassificationScript(
             _filters.filter_all,
             _filters.is_uptrend,
             _filters.is_downtrend,
+            _filters.volatility,
+            _filters.regime,
+            _filters.adx,
             candle_closes,
             candle_highs,
             candle_lows,
@@ -1143,6 +1214,9 @@ class LorentzianClassificationScript(
                 _filters.filter_all,
                 _filters.is_uptrend,
                 _filters.is_downtrend,
+                _filters.volatility,
+                _filters.regime,
+                _filters.adx,
                 candle_closes,
                 candle_highs,
                 candle_lows,
@@ -1178,7 +1252,7 @@ class LorentzianClassificationScript(
             await matrix_plots.plot_conditional(
                 ctx=ctx,
                 title="Volatility Filter",
-                signals=_filters.volatility_rates,
+                signals=_filters.volatility,
                 values=slightly_below_lows,
                 times=candle_times,
                 value_key="volatility",
@@ -1187,7 +1261,7 @@ class LorentzianClassificationScript(
             await matrix_plots.plot_conditional(
                 ctx=ctx,
                 title="Regime filter",
-                signals=_filters.regimerish_rates,
+                signals=_filters.regime,
                 values=slightly_below_lows,
                 times=candle_times,
                 value_key="regime",
@@ -1196,7 +1270,7 @@ class LorentzianClassificationScript(
             await matrix_plots.plot_conditional(
                 ctx=ctx,
                 title="ADX filter",
-                signals=_filters.adxbearish_rates,
+                signals=_filters.adx,
                 values=slightly_below_lows,
                 times=candle_times,
                 value_key="adx",
@@ -1219,7 +1293,7 @@ class LorentzianClassificationScript(
             await matrix_plots.plot_conditional(
                 ctx=ctx,
                 title="is_ema_uptrend",
-                signals=_filters.is_ema_uptrendes,
+                signals=_filters.is_ema_uptrend,
                 values=slightly_below_lows,
                 times=candle_times,
                 value_key="is_ema_uptrend",
@@ -1228,7 +1302,7 @@ class LorentzianClassificationScript(
             await matrix_plots.plot_conditional(
                 ctx=ctx,
                 title="is_sma_uptrend",
-                signals=_filters.is_sma_uptrendes,
+                signals=_filters.is_sma_uptrend,
                 values=slightly_below_lows,
                 times=candle_times,
                 value_key="is_sma_uptrend",
@@ -1321,29 +1395,32 @@ class LorentzianClassificationScript(
                 chart="main-chart",
             )
         if self.trading_mode.display_settings.enable_additional_plots:
-            additional_values_by_key["recentAtr"] = recentAtr
-            additional_values_by_key["historicalAtr"] = historicalAtr
+            if recentAtr:
+                additional_values_by_key["recentAtr"] = recentAtr
+                await plotting.plot(
+                    ctx,
+                    title="recentAtr",
+                    cache_value="recentAtr",
+                    chart="sub-chart",
+                )
+
+            if historicalAtr:
+                additional_values_by_key["historicalAtr"] = historicalAtr
+                await plotting.plot(
+                    ctx,
+                    title="historicalAtr",
+                    cache_value="historicalAtr",
+                    chart="sub-chart",
+                )
+
             additional_values_by_key["yhat2"] = yhat2
 
             additional_values_by_key["yt"] = y_train_series
-
-            await plotting.plot(
-                ctx,
-                title="recentAtr",
-                cache_value="recentAtr",
-                chart="sub-chart",
-            )
             await plotting.plot(
                 ctx,
                 title="yhat2",
                 cache_value="yhat2",
                 chart="main-chart",
-            )
-            await plotting.plot(
-                ctx,
-                title="historicalAtr",
-                cache_value="historicalAtr",
-                chart="sub-chart",
             )
 
             await plotting.plot(
@@ -1485,15 +1562,16 @@ class LorentzianClassificationScript(
             max_length=10,
             use_volatility_filter=self.trading_mode.filter_settings.use_volatility_filter,
         )
+        regime = ml_extensions.regime_filter(
+            ohlc4=candles_ohlc4,
+            highs=candle_highs,
+            lows=candle_lows,
+            threshold=self.trading_mode.filter_settings.regime_threshold,
+            use_regime_filter=self.trading_mode.filter_settings.use_regime_filter,
+        )
         _filter: utils.Filter = utils.Filter(
             volatility=volatility,
-            regime=ml_extensions.regime_filter(
-                ohlc4=candles_ohlc4,
-                highs=candle_highs,
-                lows=candle_lows,
-                threshold=self.trading_mode.filter_settings.regime_threshold,
-                use_regime_filter=self.trading_mode.filter_settings.use_regime_filter,
-            ),
+            regime=regime,
             adx=ml_extensions.filter_adx(
                 candle_closes=user_selected_candles,
                 candle_highs=candle_highs,
