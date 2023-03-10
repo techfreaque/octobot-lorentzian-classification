@@ -17,9 +17,9 @@ OctoBot Lorentzian Classification evaluator, based on the trading view indicator
 2. to be able to install Tentacles, enable a login password for your OctoBot under "Accounts -> Interface"
 3. then go to yourOctobotDomain.com:5001/advanced/tentacle_packages - paste the URL for the latest version (see at the bottom) and install it
 
-## 2. import profile
-* This trading mode will only work with this profile or a copy of it
-
+## 2. set up the profile
+* This trading mode can be either enabled with a copy of a default profile or you import the profile as described below
+### Import the default profile
 1. go to my-octobot-url.com/profile
 2. click on any profile
 3. click the "import a profile" button at the bottom right
