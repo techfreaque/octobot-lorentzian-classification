@@ -15,6 +15,7 @@
 #  License along with this library.
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.RunAnalysis.BaseDataProvider.default_base_data_provider.base_data_provider as base_data_provider
 import octobot_commons.enums as commons_enums
+import octobot_trading.enums as trading_enums
 
 
 class FutureRunAnalysisBaseDataGenerator(
@@ -27,19 +28,23 @@ class FutureRunAnalysisBaseDataGenerator(
     async def load_transactions(self, transaction_type=None, transaction_types=None):
         if transaction_type is not None:
             query = (
-                await self.run_database.get_transactions_db().search()
+                await self.run_database.get_transactions_db(
+                    account_type=self.account_type
+                ).search()
             ).type == transaction_type
         elif transaction_types is not None:
             query = (
-                await self.run_database.get_transactions_db().search()
+                await self.run_database.get_transactions_db(
+                    account_type=self.account_type
+                ).search()
             ).type.one_of(transaction_types)
         else:
-            return await self.run_database.get_transactions_db().all(
-                commons_enums.DBTables.TRANSACTIONS.value
-            )
-        return await self.run_database.get_transactions_db().select(
-            commons_enums.DBTables.TRANSACTIONS.value, query
-        )
+            return await self.run_database.get_transactions_db(
+                account_type=self.account_type
+            ).all(commons_enums.DBTables.TRANSACTIONS.value)
+        return await self.run_database.get_transactions_db(
+            account_type=self.account_type
+        ).select(commons_enums.DBTables.TRANSACTIONS.value, query)
 
     async def load_grouped_funding_fees(self):
         if not self.funding_fees_history_by_pair:

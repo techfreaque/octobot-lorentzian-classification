@@ -312,9 +312,13 @@ class LorentzianClassificationScript(
         is_buy_signals: list = []
         is_sell_signals: list = []
 
-        # TODO remove when _classify_current_candle is accurate
-        last_distances: list = []
-
+        basic_utilities.end_measure_time(
+            s_time,
+            " Lorentzian Classification - calculating full history indicators",
+        )
+        s_time = basic_utilities.start_measure_time(
+            " Lorentzian Classification - classifying candles"
+        )
         for candle_index in range(max_bars_back_index, cutted_data_length):
             (
                 bars_since_green_entry,
@@ -336,7 +340,6 @@ class LorentzianClassificationScript(
                 bars_since_green_entry=bars_since_green_entry,
                 distances=distances,
                 predictions=predictions,
-                last_distances=last_distances,
                 start_long_trades=start_long_trades,
                 start_short_trades=start_short_trades,
                 exit_short_trades=exit_short_trades,
@@ -392,7 +395,6 @@ class LorentzianClassificationScript(
             recentAtr=recentAtr,
             historicalAtr=historicalAtr,
             historical_predictions=historical_predictions,
-            last_distances=last_distances,
             start_long_trades=start_long_trades,
             start_short_trades=start_short_trades,
             exit_short_trades=exit_short_trades,
@@ -424,7 +426,6 @@ class LorentzianClassificationScript(
         bars_since_green_entry: int,
         distances: list,
         predictions: list,
-        last_distances: list,
         start_long_trades: list,
         start_short_trades: list,
         exit_short_trades: list,
@@ -508,18 +509,25 @@ class LorentzianClassificationScript(
             len(this_y_train_series) - 1,
         )
         size_Loop: int = min(self.trading_mode.general_settings.max_bars_back - 1, size)
-        
-        # fix to get same behavir as on tradingview
-        tradingview_loop_size = size_Loop - missing_data_length
-               
-        for candles_back in range(0, tradingview_loop_size):
+
+        if self.trading_mode.general_settings.use_remote_fractals:
+            start_index = 0
+            end_index = size_Loop - missing_data_length
+        else:
+            start_index = candle_index - size_Loop
+            end_index = candle_index
+
+        for candles_back in range(start_index, end_index):
             # candles_back_index = candle_index - tradingview_loop_size + candles_back
             lorentzian_distance: float = self.get_lorentzian_distance(
                 candle_index=candle_index,
                 candles_back_index=candles_back,
                 feature_arrays=feature_arrays,
             )
-            if lorentzian_distance >= last_distance and candles_back % 4:
+            if lorentzian_distance >= last_distance and (
+                candles_back % 4
+                or not self.trading_mode.general_settings.use_down_sampling
+            ):
                 last_distance = lorentzian_distance
                 predictions.append(round(y_train_series[candles_back]))
                 distances.append(lorentzian_distance)
@@ -536,8 +544,6 @@ class LorentzianClassificationScript(
                     del predictions[0]
         prediction = sum(predictions)
         historical_predictions.append(prediction)
-        last_distances.append(last_distance)
-
         (
             bars_since_green_entry,
             bars_since_red_entry,
@@ -936,7 +942,6 @@ class LorentzianClassificationScript(
         recentAtr,
         historicalAtr,
         historical_predictions,
-        last_distances,
         start_long_trades,
         start_short_trades,
         exit_short_trades,
@@ -980,7 +985,6 @@ class LorentzianClassificationScript(
         await self._handle_short_history_plottings(
             ctx,
             historical_predictions,
-            last_distances,
             candle_times,
             start_long_trades,
             start_short_trades,
@@ -997,7 +1001,6 @@ class LorentzianClassificationScript(
         self,
         ctx: context_management.Context,
         historical_predictions,
-        last_distances,
         candle_times,
         start_long_trades,
         start_short_trades,
@@ -1011,7 +1014,6 @@ class LorentzianClassificationScript(
     ):
         (
             historical_predictions,
-            last_distances,
             candle_times,
             start_long_trades,
             start_short_trades,
@@ -1023,7 +1025,6 @@ class LorentzianClassificationScript(
         ) = basic_utilities.cut_data_to_same_len(
             (
                 historical_predictions,
-                last_distances,
                 candle_times,
                 start_long_trades,
                 start_short_trades,
@@ -1098,7 +1099,6 @@ class LorentzianClassificationScript(
 
         if self.trading_mode.display_settings.enable_additional_plots:
             plot_signal_state = True
-            additional_values_by_key = {}
             if plot_signal_state:
                 await matrix_plots.plot_conditional(
                     ctx=ctx,
@@ -1120,25 +1120,17 @@ class LorentzianClassificationScript(
                     value_key="is_sell_signals",
                     chart_location="sub-chart",
                 )
-                additional_values_by_key["previous_signals"] = previous_signals
                 await plotting.plot(
                     ctx,
                     title="Signal State",
                     cache_value="previous_signals",
                     chart="sub-chart",
                 )
-                await plotting.plot(
-                    ctx,
-                    title="last_distances",
-                    cache_value="last_distances",
-                    chart="sub-chart",
+                await ctx.set_cached_values(
+                    values=previous_signals,
+                    cache_keys=candle_times,
+                    value_key="previous_signals",
                 )
-            await ctx.set_cached_values(
-                values=last_distances,
-                cache_keys=candle_times,
-                value_key="last_distances",
-                additional_values_by_key=additional_values_by_key,
-            )
 
     async def _handle_full_history_plottings(
         self,
@@ -1816,6 +1808,11 @@ class LorentzianClassificationScript(
         exit_short_trades,
         exit_long_trades,
     ):
+        basic_utilities.end_measure_time(
+            s_time,
+            " Lorentzian Classification - classifying candles",
+        )
+        s_time = basic_utilities.start_measure_time()
         if start_short_trades[-1]:
             await self.enter_short_trade()
         if start_long_trades[-1]:
@@ -1828,7 +1825,7 @@ class LorentzianClassificationScript(
                 await self.exit_long_trade()
         basic_utilities.end_measure_time(
             s_time,
-            " Lorentzian Classification",
+            " Lorentzian Classification - trading eventual singals",
         )
 
     def _cache_backtesting_signals(
@@ -1972,33 +1969,45 @@ class LorentzianClassificationScript(
                     name_prefix="short",
                 )
             )
+        else:
+            await basic_keywords.set_leverage(
+                ctx, self.trading_mode.order_settings.leverage
+            )
 
     async def enter_short_trade(self):
-        if activate_managed_order:
-            await activate_managed_order.managed_order(
-                self,
-                trading_side="short",
-                orders_settings=self.managend_orders_short_settings,
-            )
-        else:
-            await market_order.market(self.ctx, side="sell", amount="90%a")
+        if self.trading_mode.order_settings.enable_long_orders:
+            await self.exit_long_trade()
+        if self.trading_mode.order_settings.enable_short_orders:
+            if activate_managed_order:
+                await activate_managed_order.managed_order(
+                    self,
+                    trading_side="short",
+                    orders_settings=self.managend_orders_short_settings,
+                )
+            else:
+                await market_order.market(
+                    self.ctx,
+                    target_position=f"-{self.trading_mode.order_settings.short_order_volume}%a",
+                )
 
     async def enter_long_trade(self):
-        if activate_managed_order:
-            await activate_managed_order.managed_order(
-                self,
-                trading_side="long",
-                orders_settings=self.managend_orders_long_settings,
-            )
-        else:
-            await market_order.market(self.ctx, side="buy", amount="90%a")
+        if self.trading_mode.order_settings.enable_short_orders:
+            await self.exit_short_trade()
+        if self.trading_mode.order_settings.enable_long_orders:
+            if activate_managed_order:
+                await activate_managed_order.managed_order(
+                    self,
+                    trading_side="long",
+                    orders_settings=self.managend_orders_long_settings,
+                )
+            else:
+                await market_order.market(
+                    self.ctx,
+                    target_position=f"{self.trading_mode.order_settings.long_order_volume}%a",
+                )
 
     async def exit_short_trade(self):
-        await market_order.market(
-            self.ctx, side="buy", amount="100%a", reduce_only=True
-        )
+        await market_order.market(self.ctx, target_position=0, reduce_only=True)
 
     async def exit_long_trade(self):
-        await market_order.market(
-            self.ctx, side="sell", amount="100%a", reduce_only=True
-        )
+        await market_order.market(self.ctx, target_position=0, reduce_only=True)

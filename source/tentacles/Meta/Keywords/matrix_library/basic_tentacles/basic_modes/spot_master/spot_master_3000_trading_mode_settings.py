@@ -9,6 +9,11 @@ import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywo
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_enums as spot_master_enums
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 
+try:
+    import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+except (ImportError, ModuleNotFoundError):
+    activate_managed_order = None
+
 
 class SpotMaster3000ModeSettings(
     abstract_producer_base.AbstractBaseModeProducer,
@@ -27,12 +32,15 @@ class SpotMaster3000ModeSettings(
     limit_sell_offset: float = None
     limit_max_age_in_bars: int = None
     spot_master_name = "spot_master_3000"
+    balancing_settings_name = "balancing_settings"
+    order_settings_name = "order_settings"
     order_type = None
     available_coins: typing.List[str] = []
     available_symbols: typing.List[str] = []
     round_orders: bool = None
     round_orders_max_value: float = None
 
+    SUPPORTS_PLOT_SIGNALS: bool = False
     enable_plot_portfolio_p: bool = None
     enable_plot_portfolio_ref: bool = None
     live_plotting_modes: typing.List[str] = [
@@ -40,6 +48,18 @@ class SpotMaster3000ModeSettings(
         matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value,
     ]
     live_plotting_mode: str = matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value
+    if activate_managed_order:
+        available_order_types: list = [
+            spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value,
+            spot_master_enums.SpotMasterOrderTypes.MARKET.value,
+            spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
+        ]
+    else:
+        available_order_types: list = [
+            spot_master_enums.SpotMasterOrderTypes.MARKET.value,
+            spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
+        ]
+    managed_order_settings = None
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         abstract_producer_base.AbstractBaseModeProducer.__init__(
@@ -98,15 +118,65 @@ class SpotMaster3000ModeSettings(
 
     async def init_balancing_settings(self) -> None:
         await self.init_order_type_settings()
+        await user_inputs.user_input(
+            self.ctx,
+            self.balancing_settings_name,
+            commons_enums.UserInputTypes.OBJECT,
+            def_val=None,
+            title="Balancing Settings",
+            editor_options={
+                "grid_columns": 12,
+            },
+            other_schema_values={},
+            parent_input_name=self.order_settings_name,
+            show_in_summary=False,
+        )
+        self.round_orders = await user_inputs.user_input(
+            self.ctx,
+            "round_orders",
+            commons_enums.UserInputTypes.BOOLEAN,
+            def_val=False,
+            title="Enable rounding up to minimum order value",
+            parent_input_name=self.balancing_settings_name,
+            editor_options={
+                "grid_columns": 12,
+            },
+            other_schema_values={
+                "description": "This is only helpful for small balance accounts, if "
+                "enabled it will round up buy/sell orders to the minimum order value "
+                "required by the exchange.",
+            },
+        )
+        if self.round_orders:
+            self.round_orders_max_value = await user_inputs.user_input(
+                self.ctx,
+                "round_orders_max_value",
+                commons_enums.UserInputTypes.FLOAT,
+                def_val=50,
+                min_val=0,
+                max_val=100,
+                title="% of the minimum order value to round up order",
+                parent_input_name=self.balancing_settings_name,
+                editor_options={
+                    "grid_columns": 12,
+                },
+                other_schema_values={
+                    "description": "For example if the min value to open a order is "
+                    "10 USDT and you have this setting to 40. It will round up orders"
+                    " with value bigger than 4 USDT up to 10 USDT.",
+                },
+            )
         self.threshold_to_sell = await user_inputs.user_input(
             self.ctx,
             "threshold_to_sell",
             commons_enums.UserInputTypes.FLOAT,
             def_val=1,
             title="Threshold to sell in %",
-            parent_input_name=self.spot_master_name,
+            parent_input_name=self.balancing_settings_name,
+            editor_options={
+                "grid_columns": 6,
+            },
             other_schema_values={
-                "grid_columns": 4,
                 "description": "Whenever a asset reaches the allocation % + "
                 "the threshold %, it will start to sell",
             },
@@ -117,9 +187,11 @@ class SpotMaster3000ModeSettings(
             commons_enums.UserInputTypes.FLOAT,
             def_val=1,
             title="Threshold to buy in %",
-            parent_input_name=self.spot_master_name,
+            parent_input_name=self.balancing_settings_name,
+            editor_options={
+                "grid_columns": 6,
+            },
             other_schema_values={
-                "grid_columns": 4,
                 "description": "Whenever a asset reaches the allocation % + "
                 "the threshold %, it will start to buy",
             },
@@ -130,9 +202,11 @@ class SpotMaster3000ModeSettings(
             commons_enums.UserInputTypes.FLOAT,
             def_val=1,
             title="Maximum size to sell per coin and candle in %",
-            parent_input_name=self.spot_master_name,
-            other_schema_values={
+            parent_input_name=self.balancing_settings_name,
+            editor_options={
                 "grid_columns": 4,
+            },
+            other_schema_values={
                 "description": "Maximum amount to sell in percent, based on total "
                 "portfolio value, for each coin and candle.",
             },
@@ -143,9 +217,11 @@ class SpotMaster3000ModeSettings(
             commons_enums.UserInputTypes.FLOAT,
             def_val=1,
             title="Maximum size to buy per coin and candle in %",
-            parent_input_name=self.spot_master_name,
+            parent_input_name=self.balancing_settings_name,
+            editor_options={
+                "grid_columns": 6,
+            },
             other_schema_values={
-                "grid_columns": 4,
                 "description": "Maximum amount to buy in percent, based on total "
                 "portfolio value, for each coin and candle.",
             },
@@ -156,9 +232,11 @@ class SpotMaster3000ModeSettings(
             commons_enums.UserInputTypes.FLOAT,
             def_val=5,
             title="Maximum allocation buffer in % (allocation + max_allocation)",
-            parent_input_name=self.spot_master_name,
+            parent_input_name=self.balancing_settings_name,
+            editor_options={
+                "grid_columns": 6,
+            },
             other_schema_values={
-                "grid_columns": 4,
                 "description": "If a asset allocation is currently higher as the "
                 "defined allocation % + maximum allocation buffer %. It will force "
                 "sell, so you end up with the defined allocation % + "
@@ -171,9 +249,11 @@ class SpotMaster3000ModeSettings(
             commons_enums.UserInputTypes.FLOAT,
             def_val=5,
             title="Minimum allocation buffer in % (allocation - min_allocation)",
-            parent_input_name=self.spot_master_name,
+            parent_input_name=self.balancing_settings_name,
+            editor_options={
+                "grid_columns": 6,
+            },
             other_schema_values={
-                "grid_columns": 4,
                 "description": "If a asset allocation is currently lower as the "
                 "defined allocation % - minmum allocation buffer %. It will force "
                 "buy, so you end up with the defined allocation % - "
@@ -214,17 +294,26 @@ class SpotMaster3000ModeSettings(
             }
 
     async def init_order_type_settings(self) -> None:
+        await user_inputs.user_input(
+            self.ctx,
+            self.order_settings_name,
+            commons_enums.UserInputTypes.OBJECT,
+            def_val=None,
+            title="Order settings",
+            editor_options={
+                "grid_columns": 12,
+            },
+            parent_input_name=self.spot_master_name,
+            show_in_summary=False,
+        )
         self.order_type = await user_inputs.user_input(
             self.ctx,
             "order_type",
             commons_enums.UserInputTypes.OPTIONS,
             def_val=spot_master_enums.SpotMasterOrderTypes.MARKET.value,
             title="Order type",
-            options=[
-                spot_master_enums.SpotMasterOrderTypes.MARKET.value,
-                spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
-            ],
-            parent_input_name=self.spot_master_name,
+            options=self.available_order_types,
+            parent_input_name=self.order_settings_name,
             other_schema_values={
                 "grid_columns": 4,
                 "description": "Market orders will get filled emidiatly, "
@@ -233,102 +322,111 @@ class SpotMaster3000ModeSettings(
                 "below/above the price.",
             },
         )
-        if self.order_type == spot_master_enums.SpotMasterOrderTypes.LIMIT.value:
-            self.limit_buy_offset = await user_inputs.user_input(
-                self.ctx,
-                "limit_buy_offset",
-                commons_enums.UserInputTypes.FLOAT,
-                def_val=0.5,
-                title="Distance in % from current price to buy limit orders",
-                parent_input_name=self.spot_master_name,
-                other_schema_values={
-                    "grid_columns": 4,
-                    "description": "Whenever a rebalancing gets triggered it will "
-                    "place the buy order X % below the current price",
-                },
+        if (
+            self.order_type
+            == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
+        ):
+            self.managed_order_settings = (
+                await activate_managed_order.activate_managed_orders(
+                    self,
+                    parent_input_name=self.order_settings_name,
+                    order_tag_prefix="spot",
+                    name_prefix="smaster",
+                    enable_position_size_settings=False,
+                    enable_stop_loss_settings=False,
+                    enable_take_profit_settings=False,
+                )
             )
-            self.limit_sell_offset = await user_inputs.user_input(
-                self.ctx,
-                "limit_sell_offset",
-                commons_enums.UserInputTypes.FLOAT,
-                def_val=0.5,
-                title="Distance in % from current price to sell limit orders",
-                parent_input_name=self.spot_master_name,
-                other_schema_values={
-                    "grid_columns": 4,
-                    "description": "Whenever a rebalancing gets triggered it will "
-                    "place the sell order X % above the current price",
-                },
-            )
-            self.limit_max_age_in_bars = await user_inputs.user_input(
-                self.ctx,
-                "limit_max_age",
-                commons_enums.UserInputTypes.INT,
-                def_val=3,
-                min_val=1,
-                title="Maximum bars to wait for a limit order to get filled",
-                parent_input_name=self.spot_master_name,
-                other_schema_values={
-                    "grid_columns": 4,
-                    "description": "This is currently not supported on stock OctoBot. "
-                    "If the order is still unfilled after the time is"
-                    "passed, the order will get cancelled and the balance "
-                    "will be available for rebalancing again.",
-                },
-            )
-        self.round_orders = await user_inputs.user_input(
-            self.ctx,
-            "round_orders",
-            commons_enums.UserInputTypes.BOOLEAN,
-            def_val=False,
-            title="Enable rounding up to minimum order value",
-            parent_input_name=self.spot_master_name,
-            other_schema_values={
-                "grid_columns": 4,
-                "description": "This is only helpful for small balance accounts, if "
-                "enabled it will round up buy/sell orders to the minimum order value "
-                "required by the exchange.",
-            },
-        )
-        if self.round_orders:
-            self.round_orders_max_value = await user_inputs.user_input(
-                self.ctx,
-                "round_orders_max_value",
-                commons_enums.UserInputTypes.FLOAT,
-                def_val=50,
-                min_val=0,
-                max_val=100,
-                title="% of the minimum order value to round up order",
-                parent_input_name=self.spot_master_name,
-                other_schema_values={
-                    "grid_columns": 4,
-                    "description": "For example if the min value to open a order is "
-                    "10 USDT and you have this setting to 40. It will round up orders"
-                    " with value bigger than 4 USDT up to 10 USDT.",
-                },
-            )
+        else:
+            entry_settings_name = "entry_settings"
+            if self.order_type == spot_master_enums.SpotMasterOrderTypes.LIMIT.value:
+                await user_inputs.user_input(
+                    self.ctx,
+                    entry_settings_name,
+                    commons_enums.UserInputTypes.OBJECT,
+                    def_val=None,
+                    title="Entry Settings",
+                    editor_options={
+                        "grid_columns": 12,
+                    },
+                    parent_input_name=self.order_settings_name,
+                    show_in_summary=False,
+                )
+                self.limit_buy_offset = await user_inputs.user_input(
+                    self.ctx,
+                    "limit_buy_offset",
+                    commons_enums.UserInputTypes.FLOAT,
+                    def_val=0.5,
+                    title="Distance in % from current price to buy limit orders",
+                    parent_input_name=entry_settings_name,
+                    editor_options={
+                        "grid_columns": 4,
+                    },
+                    other_schema_values={
+                        "description": "Whenever a rebalancing gets triggered it will "
+                        "place the buy order X % below the current price",
+                    },
+                )
+                self.limit_sell_offset = await user_inputs.user_input(
+                    self.ctx,
+                    "limit_sell_offset",
+                    commons_enums.UserInputTypes.FLOAT,
+                    def_val=0.5,
+                    title="Distance in % from current price to sell limit orders",
+                    parent_input_name=entry_settings_name,
+                    editor_options={
+                        "grid_columns": 4,
+                    },
+                    other_schema_values={
+                        "description": "Whenever a rebalancing gets triggered it will "
+                        "place the sell order X % above the current price",
+                    },
+                )
+                self.limit_max_age_in_bars = await user_inputs.user_input(
+                    self.ctx,
+                    "limit_max_age",
+                    commons_enums.UserInputTypes.INT,
+                    def_val=3,
+                    min_val=1,
+                    title="Maximum bars to wait for a limit order to get filled",
+                    parent_input_name=entry_settings_name,
+                    editor_options={
+                        "grid_columns": 4,
+                    },
+                    other_schema_values={
+                        "description": "If the order is still unfilled after the time "
+                        "is passed, the order will get cancelled and the balance "
+                        "will be available for rebalancing again.",
+                    },
+                )
 
     async def init_plot_portfolio(self) -> None:
-        self.enable_plot_portfolio_p = await user_inputs.user_input(
-            self.ctx,
-            "plot_portfolio_p",
-            "boolean",
-            def_val=True,
-            title="Plot portfolio in %",
-            show_in_summary=False,
-            show_in_optimizer=False,
-            parent_input_name=self.plot_settings_name,
-        )
-        self.enable_plot_portfolio_ref = await user_inputs.user_input(
-            self.ctx,
-            "plot_portfolio_ref",
-            "boolean",
-            def_val=True,
-            title=f"Plot portfolio in {self.ref_market}",
-            show_in_summary=False,
-            show_in_optimizer=False,
-            parent_input_name=self.plot_settings_name,
-        )
+        if not (
+            self.backtest_plotting_mode
+            == matrix_enums.BacktestPlottingModes.DISABLE_PLOTTING.value
+            and self.live_plotting_mode
+            == matrix_enums.LivePlottingModes.DISABLE_PLOTTING.value
+        ):
+            self.enable_plot_portfolio_p = await user_inputs.user_input(
+                self.ctx,
+                "plot_portfolio_p",
+                "boolean",
+                def_val=True,
+                title="Plot portfolio in %",
+                show_in_summary=False,
+                show_in_optimizer=False,
+                parent_input_name=self.plot_settings_name,
+            )
+            self.enable_plot_portfolio_ref = await user_inputs.user_input(
+                self.ctx,
+                "plot_portfolio_ref",
+                "boolean",
+                def_val=True,
+                title=f"Plot portfolio in {self.ref_market}",
+                show_in_summary=False,
+                show_in_optimizer=False,
+                parent_input_name=self.plot_settings_name,
+            )
 
     async def plot_portfolio(self) -> None:
         if plotting:

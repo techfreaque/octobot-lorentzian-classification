@@ -1,4 +1,5 @@
 import octobot_commons.enums as enums
+from octobot_trading.modes.script_keywords import basic_keywords
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
@@ -14,6 +15,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
     GENERAL_SETTINGS_NAME = "general_settings"
     FEATURE_ENGINEERING_SETTINGS_NAME = "feature_engineering_settings"
     FILTER_SETTINGS_NAME = "filter_settings"
+    ORDER_SETTINGS_NAME = "order_settings"
     KERNEL_SETTINGS_NAME = "kernel_settings"
     DISPLAY_SETTINGS_NAME = "display_settings"
 
@@ -23,6 +25,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
         should define all the trading mode's user inputs
         """
         self._init_general_settings(inputs)
+        self._init_order_settings(inputs)
         self._init_feature_engineering_settings(inputs)
         self._init_filter_settings(inputs)
         self._init_kernel_settings(inputs)
@@ -65,6 +68,35 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Neighbors Count",
                 parent_input_name=self.GENERAL_SETTINGS_NAME,
                 other_schema_values={"description": "Number of neighbors to consider"},
+            ),
+            use_remote_fractals=self.UI.user_input(
+                "use_remote_fractals",
+                enums.UserInputTypes.BOOLEAN,
+                False,
+                inputs,
+                title="Use Remote Fractals",
+                parent_input_name=self.GENERAL_SETTINGS_NAME,
+                other_schema_values={
+                    "description": "Extends back to the beginning of a chart's history"
+                    " to pick up exotic fractals for training a model. This usually "
+                    "is not as accurate but can be useful, for additional insight. "
+                    "This option enabled, will cause signals reprinting on each bar "
+                    "close "
+                },
+            ),
+            use_down_sampling=self.UI.user_input(
+                "use_down_sampling",
+                enums.UserInputTypes.BOOLEAN,
+                True,
+                inputs,
+                title="Use Down Sampling",
+                parent_input_name=self.GENERAL_SETTINGS_NAME,
+                other_schema_values={
+                    "description": "When enabled, the strategy will only use every 4th "
+                    "candle as training data within the max bars back. This allows you"
+                    " to use a higher max bars back, which will result in a more "
+                    "diverse training data."
+                },
             ),
             max_bars_back=self.UI.user_input(
                 "max_bars_back",
@@ -207,6 +239,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Feature 1",
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
             parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
         )
         f1_string = self.UI.user_input(
@@ -248,6 +281,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Feature 2",
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
             parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
         )
         f2_string = self.UI.user_input(
@@ -299,6 +333,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 None,
                 inputs,
                 title="Feature 3",
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                },
                 parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
             )
             f3_string = self.UI.user_input(
@@ -344,6 +381,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     None,
                     inputs,
                     title="Feature 4",
+                    editor_options={
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                    },
                     parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
                 )
 
@@ -390,6 +430,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                         None,
                         inputs,
                         title="Feature 5",
+                        editor_options={
+                            enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                        },
                         parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
                     )
 
@@ -621,6 +664,96 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             ),
         )
 
+    def _init_order_settings(self, inputs: dict) -> None:
+        self.UI.user_input(
+            self.ORDER_SETTINGS_NAME,
+            enums.UserInputTypes.OBJECT,
+            None,
+            inputs,
+            title="Order Settings",
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
+        )
+        leverage: int = None
+        if self.exchange_manager.is_future:
+            leverage = self.UI.user_input(
+                "leverage",
+                enums.UserInputTypes.INT,
+                1,
+                inputs,
+                min_val=1,
+                max_val=125,
+                title="Leverage",
+                parent_input_name=self.ORDER_SETTINGS_NAME,
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                },
+                other_schema_values={
+                    enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Leverage"
+                    " to use for futures trades"
+                },
+            )
+        long_order_volume: float = None
+        enable_long_orders: bool = self.UI.user_input(
+            "enable_long_orders",
+            enums.UserInputTypes.BOOLEAN,
+            True,
+            inputs,
+            title="Enable long tading",
+            parent_input_name=self.ORDER_SETTINGS_NAME,
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
+        )
+        if enable_long_orders:
+            long_order_volume = self.UI.user_input(
+                "long_order_volume",
+                enums.UserInputTypes.FLOAT,
+                50,
+                inputs,
+                min_val=0.1,
+                max_val=100,
+                title="% of available balance to use for long trades",
+                parent_input_name=self.ORDER_SETTINGS_NAME,
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+            )
+        enable_short_orders: bool = False
+        short_order_volume: float = None
+        if self.exchange_manager.is_future:
+            enable_short_orders = self.UI.user_input(
+                "enable_short_orders",
+                enums.UserInputTypes.BOOLEAN,
+                True,
+                inputs,
+                title="Enable short tading",
+                parent_input_name=self.ORDER_SETTINGS_NAME,
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+            )
+            if enable_short_orders:
+                short_order_volume = self.UI.user_input(
+                    "short_order_volume",
+                    enums.UserInputTypes.FLOAT,
+                    50,
+                    inputs,
+                    min_val=0.1,
+                    max_val=100,
+                    title="% of available balance to use for short trades",
+                    parent_input_name=self.ORDER_SETTINGS_NAME,
+                    editor_options={
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    },
+                )
+        self.order_settings: utils.LorentzianOrderSettings = (
+            utils.LorentzianOrderSettings(
+                enable_short_orders=enable_short_orders,
+                short_order_volume=short_order_volume,
+                long_order_volume=long_order_volume,
+                enable_long_orders=enable_long_orders,
+                leverage=leverage,
+            )
+        )
+
     def _init_filter_settings(self, inputs: dict) -> None:
         self.UI.user_input(
             self.FILTER_SETTINGS_NAME,
@@ -628,6 +761,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Filter Settings",
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
         )
         volatility_filter_name = "volatility_filter_settings"
         self.UI.user_input(
@@ -637,6 +771,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Volatility Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
         )
         use_volatility_filter = self.UI.user_input(
             "use_volatility_filter",
@@ -646,7 +781,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Use Volatility Filter",
             parent_input_name=volatility_filter_name,
             other_schema_values={
-                "description": "Whether to use the volatility filter."
+                "description": "Whether to use the volatility filter.",
             },
         )
         plot_volatility_filter = False
@@ -668,6 +803,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Regime Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
         )
         use_regime_filter = self.UI.user_input(
             "use_regime_filter",
@@ -711,6 +847,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="ADX Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
         )
         use_adx_filter = self.UI.user_input(
             "use_adx_filter",
@@ -753,6 +890,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="EMA Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
         )
         use_ema_filter = self.UI.user_input(
             "use_ema_filter",
@@ -794,6 +932,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="SMA Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
+            other_schema_values={
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
         )
         use_sma_filter = self.UI.user_input(
             "use_sma_filter",

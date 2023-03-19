@@ -10,6 +10,9 @@ import octobot_commons.errors as commons_errors
 import octobot_trading.api.portfolio as portfolio
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
+from tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.cancel_expired_orders.expired_orders_cancelling import (
+    cancel_expired_orders_for_this_candle,
+)
 
 import tentacles.Meta.Keywords.scripting_library.orders.cancelling as cancelling
 import tentacles.Meta.Keywords.scripting_library.orders.order_types as order_types
@@ -18,6 +21,12 @@ import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywo
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_enums as spot_master_enums
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_3000_trading_mode_settings as spot_master_3000_trading_mode_settings
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.asset as asset
+
+
+try:
+    import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+except (ImportError, ModuleNotFoundError):
+    activate_managed_order = None
 
 
 class SpotMaster3000Making(
@@ -65,21 +74,19 @@ class SpotMaster3000Making(
         await self.init_plot_settings()
         await self.init_plot_portfolio()
         if self.enable_plot:
-            await self.plot_portfolio()
             try:
                 import tentacles.Meta.Keywords.matrix_library.pro_tentacles.trade_analysis.trade_analysis_activation as trade_analysis_activation
-            except (ImportError, ModuleNotFoundError):
-                trade_analysis_activation = None
 
-            if trade_analysis_activation:
                 await trade_analysis_activation.handle_trade_analysis_for_current_candle(
                     ctx, self.plot_settings_name
                 )
+            except (ImportError, ModuleNotFoundError):
+                pass
+            await self.plot_portfolio()
 
     async def execute_orders(self) -> None:
         for order_to_execute in self.orders_to_execute.values():
             if order_to_execute.symbol == self.ctx.symbol:
-                # available_amount, amount = self.get_available_amount(order_to_execute)
                 if (
                     self.order_type
                     == spot_master_enums.SpotMasterOrderTypes.LIMIT.value
@@ -112,6 +119,23 @@ class SpotMaster3000Making(
                             self.ctx,
                             side=order_to_execute.change_side,
                             amount=amount,
+                        )
+                elif (
+                    self.order_type
+                    == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
+                ):
+                    if amount := self.round_up_order_amount_if_enabled(
+                        available_amount=order_to_execute.available_amount,
+                        order_amount=order_to_execute.order_amount_available,
+                        order_price=order_to_execute.asset_value,
+                        symbol=order_to_execute.symbol,
+                        order_side=order_to_execute.change_side,
+                    ):
+                        await activate_managed_order.managed_order(
+                            self,
+                            forced_amount=amount,
+                            trading_side=order_to_execute.change_side,
+                            orders_settings=self.managed_order_settings,
                         )
 
     def initialize_portfolio_values(self) -> bool:
@@ -210,6 +234,9 @@ class SpotMaster3000Making(
             _asset = asset.TargetAsset(
                 total_value=converted_total_value or self.total_value,
                 target_percent=settings["allocation"],
+                target_percent_ref_market=self.target_settings.get(
+                    this_ref_market, {}
+                ).get("allocation", 0),
                 portfolio=self.portfolio,
                 asset_value=asset_value,
                 threshold_to_sell=self.threshold_to_sell,
@@ -232,16 +259,16 @@ class SpotMaster3000Making(
                 if _asset.change_side == "buy":
                     # use ref market with more available funds
                     if (
-                        _asset.available_ref_market_in_currency
-                        > potential_order.available_ref_market_in_currency
+                        _asset.available_ref_market_distance_to_optimal_percent
+                        > potential_order.available_ref_market_distance_to_optimal_percent
                     ):
                         potential_order = _asset
                 # TODO use ref market that has more difference to optimal %
                 elif _asset.change_side == "sell":
                     # use ref market with less available funds
                     if (
-                        _asset.available_ref_market_in_currency
-                        < potential_order.available_ref_market_in_currency
+                        _asset.available_ref_market_distance_to_optimal_percent
+                        < potential_order.available_ref_market_distance_to_optimal_percent
                     ):
                         potential_order = _asset
             else:
@@ -288,28 +315,13 @@ class SpotMaster3000Making(
         )
 
     async def cancel_expired_orders(self):
-        if spot_master_enums.SpotMasterOrderTypes.LIMIT.value == self.order_type:
-            until = int(
-                time.time()
-                - (
-                    commons_enums.TimeFramesMinutes[
-                        commons_enums.TimeFrames(self.ctx.time_frame)
-                    ]
-                    * self.limit_max_age_in_bars
-                    * 60
-                )
+        if self.order_type in (
+            spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
+            spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value,
+        ):
+            await cancel_expired_orders_for_this_candle(
+                self.ctx, limit_max_age_in_bars=self.limit_max_age_in_bars
             )
-            try:
-                await cancelling.cancel_orders(
-                    self.ctx, symbol=self.ctx.symbol, until=until
-                )
-            except TypeError:
-                # TODO remove
-                self.ctx.logger.error(
-                    "Not able to cancel epxired orders as this is currently not "
-                    "possible on stock OctoBot. You need to manage order "
-                    "cancelling by yourself"
-                )
 
     def get_open_order_quantity(self, symbol: str):
         open_order_size: decimal.Decimal = decimal.Decimal("0")

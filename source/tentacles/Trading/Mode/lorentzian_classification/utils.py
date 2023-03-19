@@ -34,12 +34,16 @@ class GeneralSettings:
         max_bars_back: int,
         color_compression: int,
         exit_type: str,
+        use_remote_fractals: bool,
+        use_down_sampling: bool,
     ):
         self.source: float = source
         self.neighbors_count: int = neighbors_count
         self.max_bars_back: int = max_bars_back
         self.color_compression: int = color_compression
         self.exit_type: str = exit_type
+        self.use_remote_fractals: bool = use_remote_fractals
+        self.use_down_sampling: bool = use_down_sampling
 
 
 class SignalDirection:
@@ -98,6 +102,22 @@ class KernelSettings:
         self.relative_weighting: float = relative_weighting
         self.regression_level: int = regression_level
         self.lag: int = lag
+
+
+class LorentzianOrderSettings:
+    def __init__(
+        self,
+        long_order_volume: float,
+        short_order_volume: float,
+        enable_short_orders: bool,
+        enable_long_orders: bool,
+        leverage: int,
+    ):
+        self.long_order_volume: float = long_order_volume
+        self.short_order_volume: float = short_order_volume
+        self.enable_short_orders: bool = enable_short_orders
+        self.enable_long_orders: bool = enable_long_orders
+        self.leverage: int = leverage
 
 
 class FilterSettings:
@@ -175,7 +195,6 @@ class FeatureEngineeringSettings:
 
 
 class Filter:
-    # numpy bool arays
     def __init__(
         self,
         volatility: npt.NDArray[numpy.bool_],
@@ -247,7 +266,6 @@ def get_is_crossing_data(
 def calculate_rma(
     src: npt.NDArray[numpy.float64], length
 ) -> npt.NDArray[numpy.float64]:
-    # TODO not the same as on here: https://www.tradingview.com/pine-script-reference/v5/#fun_ta%7Bdot%7Drma
     alpha = 1 / length
     sma = tulipy.sma(src, length)[50:]  # cut first data as its not very accurate
     src, sma = basic_utils.cut_data_to_same_len((src, sma))

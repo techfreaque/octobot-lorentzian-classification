@@ -374,10 +374,10 @@ def get_sell_fees_in_quote_currency(
 
 
 def get_fees(trade, currency, fees_by_currency) -> float:
-    fees = trade[commons_enums.DBTables.FEES_AMOUNT.value]
+    fees = trade[commons_enums.DBRows.FEES_AMOUNT.value]
     fees_multiplier = (
         1
-        if trade[commons_enums.DBTables.FEES_CURRENCY.value] == currency
+        if trade[commons_enums.DBRows.FEES_CURRENCY.value] == currency
         else trade[PlotAttrs.Y.value]
     )
     paid_fees = fees * fees_multiplier

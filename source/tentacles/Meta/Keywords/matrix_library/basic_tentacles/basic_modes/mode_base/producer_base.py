@@ -47,6 +47,8 @@ class MatrixProducerBase:
     live_recording_mode: bool = None
     trigger_time_frames: list = None
 
+    SUPPORTS_PLOT_SIGNALS: bool = True
+
     def __init__(self, channel, config, trading_mode, exchange_manager):
         self.candles_manager: dict = {}
         self.ctx: context_management.Context = None
@@ -95,7 +97,7 @@ class MatrixProducerBase:
                 # not important
                 pass
 
-    async def init_plot_settings(self):
+    async def init_plot_settings(self, enable_plotting_modes: bool = True):
         await basic_keywords.user_input(
             self.ctx,
             self.plot_settings_name,
@@ -105,14 +107,18 @@ class MatrixProducerBase:
             show_in_summary=False,
             show_in_optimizer=False,
             editor_options={
-                "grid_columns": 12,
+                commons_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
             },
             other_schema_values={
-                "description": "Use those options wisely as it will slow "
-                "down the backtesting speed by quit a lot",
+                commons_enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Use "
+                "those options wisely when backtesting, "
+                "as it will slow down the backtesting speed by quit a lot",
             },
         )
-        await self.init_plotting_modes(self.plot_settings_name, self.plot_settings_name)
+        if enable_plotting_modes:
+            await self.init_plotting_modes(
+                self.plot_settings_name, self.plot_settings_name
+            )
 
     async def init_plotting_modes(self, live_parent_input, backtesting_parent_input):
         self.backtest_plotting_mode = await basic_keywords.user_input(
@@ -126,16 +132,17 @@ class MatrixProducerBase:
             show_in_optimizer=False,
             parent_input_name=backtesting_parent_input,
         )
-        self.plot_signals = await basic_keywords.user_input(
-            self.ctx,
-            "plot_signals",
-            commons_enums.UserInputTypes.BOOLEAN,
-            title="Plot signals",
-            def_val=False,
-            show_in_summary=False,
-            show_in_optimizer=False,
-            parent_input_name=backtesting_parent_input,
-        )
+        if self.SUPPORTS_PLOT_SIGNALS:
+            self.plot_signals = await basic_keywords.user_input(
+                self.ctx,
+                "plot_signals",
+                commons_enums.UserInputTypes.BOOLEAN,
+                title="Plot signals",
+                def_val=False,
+                show_in_summary=False,
+                show_in_optimizer=False,
+                parent_input_name=backtesting_parent_input,
+            )
         if self.exchange_manager.is_backtesting:
             if (
                 self.backtest_plotting_mode

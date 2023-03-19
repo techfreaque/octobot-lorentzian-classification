@@ -1,6 +1,6 @@
 {
-  "required_time_frames" : ["4h"],
+  "required_time_frames" : ["1h"],
   "required_evaluators" : [],
-  "required_candles_count" : 200,
+  "required_candles_count" : 2000,
   "default_config" : []
 }

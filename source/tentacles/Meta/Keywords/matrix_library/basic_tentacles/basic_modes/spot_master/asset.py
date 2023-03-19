@@ -15,17 +15,18 @@ class TargetAsset:
     def __init__(
         self,
         total_value: decimal.Decimal,
-        target_percent: decimal.Decimal,
+        target_percent: float,
+        target_percent_ref_market: float,
         portfolio: dict,
-        asset_value: decimal.Decimal,
-        threshold_to_sell: decimal.Decimal,
-        threshold_to_buy: decimal.Decimal,
-        step_to_sell: decimal.Decimal,
-        step_to_buy: decimal.Decimal,
-        max_buffer_allocation: decimal.Decimal,
-        min_buffer_allocation: decimal.Decimal,
-        limit_buy_offset: decimal.Decimal,
-        limit_sell_offset: decimal.Decimal,
+        asset_value: float,
+        threshold_to_sell: float,
+        threshold_to_buy: float,
+        step_to_sell: float,
+        step_to_buy: float,
+        max_buffer_allocation: float,
+        min_buffer_allocation: float,
+        limit_buy_offset: float,
+        limit_sell_offset: float,
         coin: str,
         ref_market: str,
         symbol: str,
@@ -48,12 +49,12 @@ class TargetAsset:
         self.is_ref_market: str = is_ref_market
         self.asset_value: decimal.Decimal = decimal.Decimal(str(asset_value))
         try:
-            self.available_ref_market_in_currency: decimal.Decimal = (
-                portfolio[ref_market].available / self.asset_value
-            )
+            self.available_ref_market_distance_to_optimal_percent: decimal.Decimal = (
+                portfolio[ref_market].available / total_value * 100
+            ) - decimal.Decimal(str(target_percent_ref_market))
         except KeyError:
-            self.available_ref_market_in_currency: decimal.Decimal = decimal.Decimal(
-                "0"
+            self.available_ref_market_distance_to_optimal_percent: decimal.Decimal = (
+                decimal.Decimal("0") - decimal.Decimal(str(target_percent_ref_market))
             )
         try:
             self.current_amount = portfolio[coin].total

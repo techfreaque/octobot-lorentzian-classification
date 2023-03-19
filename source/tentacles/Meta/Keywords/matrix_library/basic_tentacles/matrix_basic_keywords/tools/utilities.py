@@ -1,6 +1,7 @@
 import time
 
-from octobot_commons.logging.logging_util import get_logger
+import octobot_commons.logging.logging_util as logging_util
+import octobot_commons.symbols.symbol_util as symbol_util
 
 
 def start_measure_time(message=None):
@@ -30,7 +31,7 @@ class NanoContext:
         self.just_created_orders: list = []
         self.allow_artificial_orders: bool = False
         self.plot_orders: bool = False
-        self.logger = get_logger("NanoContext")
+        self.logger = logging_util.get_logger("NanoContext")
 
     def is_trading_signal_emitter(self):
         return False
@@ -70,3 +71,26 @@ def cut_data_to_same_len(data_set: tuple or list, get_list=False):
     if get_list:
         return cutted_data
     return tuple(cutted_data)
+
+
+def get_similar_symbol(
+    symbol: str, this_exchange_manager, other_exchange_manager
+) -> str:
+    # allows mixing BTC/USDT and BTC/USDT:USDT pairs
+    if not other_exchange_manager.symbol_exists(symbol):
+        # try other pairs for different exchange types
+        parsed_symbol = symbol_util.parse_symbol(symbol)
+        if this_exchange_manager.is_future:
+            # try a spot pair
+            parsed_symbol.settlement_asset = None
+        else:
+            # try a futures pair instead
+            # TODO handle inverse pairs
+            parsed_symbol.settlement_asset = parsed_symbol.quote
+        symbol = parsed_symbol.merged_str_symbol()
+        if not other_exchange_manager.symbol_exists(symbol):
+            raise RuntimeError(
+                f"Not able to find a suitable pair for {symbol} "
+                f"on {other_exchange_manager.exchange_name}"
+            )
+    return symbol

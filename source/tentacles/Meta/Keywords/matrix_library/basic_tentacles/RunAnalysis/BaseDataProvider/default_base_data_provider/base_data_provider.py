@@ -77,6 +77,7 @@ class RunAnalysisBaseDataGenerator:
         self.buy_fees_by_currency: dict = None
         self.sell_fees_by_currency: dict = None
         self.portfolio_history_by_currency: dict = None
+        self.account_type = None
 
     async def load_base_data(self):
         await self.load_historical_values()
@@ -91,9 +92,16 @@ class RunAnalysisBaseDataGenerator:
         self._set_longest_candles()
 
     async def get_trades(self, symbol):
-        return await self.run_database.get_trades_db().select(
+        return await self.run_database.get_trades_db(
+            self.account_type, exchange=self.exchange
+        ).select(
             commons_enums.DBTables.TRADES.value,
-            (await self.run_database.get_orders_db().search()).symbol == symbol,
+            (
+                await self.run_database.get_orders_db(
+                    self.account_type, exchange=self.exchange
+                ).search()
+            ).symbol
+            == symbol,
         )
 
     def load_starting_portfolio(self) -> dict:
@@ -127,6 +135,17 @@ class RunAnalysisBaseDataGenerator:
         )  # TODO handle multi exchanges
         self.ref_market = self.metadata[commons_enums.DBRows.REFERENCE_MARKET.value]
         self.trading_type = self.metadata[commons_enums.DBRows.TRADING_TYPE.value]
+
+        # exchange_manager = trading_api.get_exchange_manager_from_exchange_id(
+        #     exchange_id)
+        # if exchange_manager.is_backtesting:
+        self.account_type = trading_api.get_account_type_from_run_metadata(
+            self.metadata
+        )
+        # else:
+        #     account_type = trading_api.get_account_type_from_exchange_manager(
+        #         exchange_manager)
+
         contracts = (
             self.metadata[commons_enums.DBRows.FUTURE_CONTRACTS.value][self.exchange]
             if self.trading_type == "future"
@@ -495,22 +514,22 @@ class RunAnalysisBaseDataGenerator:
     #         currency = symbol_util.parse_symbol(
     #             trade[commons_enums.DBTables.SYMBOL.value]
     #         ).base
-    #         if trade[commons_enums.DBTables.FEES_CURRENCY.value] == currency:
-    #             if trade[commons_enums.DBTables.FEES_CURRENCY.value] == fees_currency:
-    #                 paid_fees += trade[commons_enums.DBTables.FEES_AMOUNT.value]
+    #         if trade[commons_enums.DBRows.FEES_CURRENCY.value] == currency:
+    #             if trade[commons_enums.DBRows.FEES_CURRENCY.value] == fees_currency:
+    #                 paid_fees += trade[commons_enums.DBRows.FEES_AMOUNT.value]
     #             else:
     #                 paid_fees += (
-    #                     trade[commons_enums.DBTables.FEES_AMOUNT.value]
+    #                     trade[commons_enums.DBRows.FEES_AMOUNT.value]
     #                     * trade[commons_enums.PlotAttributes.Y.value]
     #                 )
     #         else:
-    #             if trade[commons_enums.DBTables.FEES_CURRENCY.value] == fees_currency:
+    #             if trade[commons_enums.DBRows.FEES_CURRENCY.value] == fees_currency:
     #                 paid_fees += (
-    #                     trade[commons_enums.DBTables.FEES_AMOUNT.value]
+    #                     trade[commons_enums.DBRows.FEES_AMOUNT.value]
     #                     / trade[commons_enums.PlotAttributes.Y.value]
     #                 )
     #             else:
-    #                 paid_fees += trade[commons_enums.DBTables.FEES_AMOUNT.value]
+    #                 paid_fees += trade[commons_enums.DBRows.FEES_AMOUNT.value]
     #     return paid_fees
 
     def generate_wins_and_losses(self, x_as_trade_count):
