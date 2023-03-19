@@ -117,7 +117,7 @@ import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_setting
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order as market_order
-import tentacles.Trading.Mode.lorentzian_classification.classification_utils as classification_utils
+import tentacles.Trading.Mode.lorentzian_classification.classification_functions.classification_utils as classification_utils
 
 import tentacles.Trading.Mode.lorentzian_classification.kernel_functions.kernel as kernel
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
@@ -180,7 +180,7 @@ class LorentzianClassificationScript(
             candle_source_name=self.trading_mode.general_settings.source,
         )
         data_length = len(candle_highs)
-        (_filters, recentAtr, historicalAtr,) = self._get_all_filters(
+        _filters: utils.Filter = self._get_all_filters(
             candle_closes,
             data_length,
             candles_ohlc4,
@@ -247,8 +247,7 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-            recentAtr,
-            historicalAtr,
+
         ) = basic_utilities.cut_data_to_same_len(
             (
                 y_train_series,
@@ -280,15 +279,11 @@ class LorentzianClassificationScript(
                 was_bullish_rates,
                 is_bullish_rates,
                 was_bearish_rates,
-                recentAtr,
-                historicalAtr,
             )
         )
 
         cutted_data_length: int = len(candle_closes)
         max_bars_back_index: int = self._get_max_bars_back_index(cutted_data_length)
-
-        missing_data_length = data_length - cutted_data_length
 
         # =================================
         # ==== Next Bar Classification ====
@@ -331,10 +326,10 @@ class LorentzianClassificationScript(
                 previous_signals=previous_signals,
                 is_bullishs=is_bullishs,
                 is_bearishs=is_bearishs,
-                alerts_bullish=alerts_bullish,
-                alerts_bearish=alerts_bearish,
-                is_bearish_changes=is_bearish_changes,
-                is_bullish_changes=is_bullish_changes,
+                # alerts_bullish=alerts_bullish,
+                # alerts_bearish=alerts_bearish,
+                # is_bearish_changes=is_bearish_changes,
+                # is_bullish_changes=is_bullish_changes,
                 bars_since_red_entry=bars_since_red_entry,
                 bars_since_green_entry=bars_since_green_entry,
                 distances=distances,
@@ -345,7 +340,6 @@ class LorentzianClassificationScript(
                 exit_long_trades=exit_long_trades,
                 is_buy_signals=is_buy_signals,
                 is_sell_signals=is_sell_signals,
-                missing_data_length=missing_data_length,
             )
         if ctx.exchange_manager.is_backtesting:
             self._cache_backtesting_signals(
@@ -391,8 +385,6 @@ class LorentzianClassificationScript(
             was_bullish_rates=was_bullish_rates,
             is_bullish_rates=is_bullish_rates,
             was_bearish_rates=was_bearish_rates,
-            recentAtr=recentAtr,
-            historicalAtr=historicalAtr,
             historical_predictions=historical_predictions,
             start_long_trades=start_long_trades,
             start_short_trades=start_short_trades,
@@ -417,10 +409,10 @@ class LorentzianClassificationScript(
         previous_signals: list,
         is_bullishs: npt.NDArray[numpy.bool_],
         is_bearishs: npt.NDArray[numpy.bool_],
-        alerts_bullish: npt.NDArray[numpy.bool_],
-        alerts_bearish: npt.NDArray[numpy.bool_],
-        is_bearish_changes: npt.NDArray[numpy.bool_],
-        is_bullish_changes: npt.NDArray[numpy.bool_],
+        # alerts_bullish: npt.NDArray[numpy.bool_],
+        # alerts_bearish: npt.NDArray[numpy.bool_],
+        # is_bearish_changes: npt.NDArray[numpy.bool_],
+        # is_bullish_changes: npt.NDArray[numpy.bool_],
         bars_since_red_entry: int,
         bars_since_green_entry: int,
         distances: list,
@@ -431,7 +423,6 @@ class LorentzianClassificationScript(
         exit_long_trades: list,
         is_buy_signals,
         is_sell_signals,
-        missing_data_length,
     ) -> typing.Tuple[int, int]:
 
         # =========================
@@ -505,29 +496,32 @@ class LorentzianClassificationScript(
         for candles_back in self._get_candles_back_start_end_index(
             current_candle_index
         ):
-            lorentzian_distance: float = classification_utils.get_lorentzian_distance(
-                self.trading_mode.feature_engineering_settings.feature_count,
-                candle_index=current_candle_index,
-                candles_back_index=candles_back,
-                feature_arrays=feature_arrays,
-            )
-            if lorentzian_distance >= last_distance and (
-                not self.trading_mode.general_settings.use_down_sampling
-                or candles_back
+            if (
+                candles_back
                 % self.trading_mode.general_settings.only_train_on_every_x_bars
+                or not self.trading_mode.general_settings.use_down_sampling
             ):
-                last_distance = lorentzian_distance
-                predictions.append(y_train_series[candles_back])
-                distances.append(lorentzian_distance)
-                if (
-                    len(predictions)
-                    > self.trading_mode.general_settings.neighbors_count
-                ):
-                    last_distance = distances[
-                        self.trading_mode.general_settings.last_distance_neighbors_count
-                    ]
-                    del distances[0]
-                    del predictions[0]
+                lorentzian_distance: float = (
+                    classification_utils.get_lorentzian_distance(
+                        self.trading_mode.feature_engineering_settings.feature_count,
+                        candle_index=current_candle_index,
+                        candles_back_index=candles_back,
+                        feature_arrays=feature_arrays,
+                    )
+                )
+                if lorentzian_distance >= last_distance:
+                    last_distance = lorentzian_distance
+                    predictions.append(y_train_series[candles_back])
+                    distances.append(lorentzian_distance)
+                    if (
+                        len(predictions)
+                        > self.trading_mode.general_settings.neighbors_count
+                    ):
+                        last_distance = distances[
+                            self.trading_mode.general_settings.last_distance_neighbors_count
+                        ]
+                        del distances[0]
+                        del predictions[0]
         prediction = sum(predictions)
         historical_predictions.append(prediction)
         (
@@ -542,10 +536,10 @@ class LorentzianClassificationScript(
             start_short_trades=start_short_trades,
             is_bullishs=is_bullishs,
             is_bearishs=is_bearishs,
-            alerts_bullish=alerts_bullish,
-            alerts_bearish=alerts_bearish,
-            is_bearish_changes=is_bearish_changes,
-            is_bullish_changes=is_bullish_changes,
+            # alerts_bullish=alerts_bullish,
+            # alerts_bearish=alerts_bearish,
+            # is_bearish_changes=is_bearish_changes,
+            # is_bullish_changes=is_bullish_changes,
             exit_short_trades=exit_short_trades,
             exit_long_trades=exit_long_trades,
             bars_since_green_entry=bars_since_green_entry,
@@ -576,7 +570,14 @@ class LorentzianClassificationScript(
             end_index: int = current_candle_index
         return range(start_index, end_index)
 
-    def _get_ma_filters(self, candle_closes, data_length):
+    def _get_ma_filters(
+        self, candle_closes: npt.NDArray[numpy.float64], data_length: int
+    ) -> typing.Tuple[
+        npt.NDArray[numpy.bool_],
+        npt.NDArray[numpy.bool_],
+        npt.NDArray[numpy.bool_],
+        npt.NDArray[numpy.bool_],
+    ]:
         if self.trading_mode.filter_settings.use_ema_filter:
             filter_ema_candles, filter_ema = basic_utilities.cut_data_to_same_len(
                 (
@@ -586,11 +587,11 @@ class LorentzianClassificationScript(
                     ),
                 )
             )
-            is_ema_uptrend = filter_ema_candles > filter_ema
-            is_ema_downtrend = filter_ema_candles < filter_ema
+            is_ema_uptrend: npt.NDArray[numpy.bool_] = filter_ema_candles > filter_ema
+            is_ema_downtrend: npt.NDArray[numpy.bool_] = filter_ema_candles < filter_ema
         else:
-            is_ema_uptrend = [True] * data_length
-            is_ema_downtrend = [True] * data_length
+            is_ema_uptrend: npt.NDArray[numpy.bool_] = numpy.repeat(True, data_length)
+            is_ema_downtrend: npt.NDArray[numpy.bool_] = is_ema_uptrend
         if self.trading_mode.filter_settings.use_sma_filter:
             filter_sma_candles, filter_sma = basic_utilities.cut_data_to_same_len(
                 (
@@ -600,27 +601,27 @@ class LorentzianClassificationScript(
                     ),
                 )
             )
-            is_sma_uptrend = filter_sma_candles > filter_sma
-            is_sma_downtrend = filter_sma_candles < filter_sma
+            is_sma_uptrend: npt.NDArray[numpy.bool_] = filter_sma_candles > filter_sma
+            is_sma_downtrend: npt.NDArray[numpy.bool_] = filter_sma_candles < filter_sma
         else:
-            is_sma_uptrend = [True] * data_length
-            is_sma_downtrend = [True] * data_length
+            is_sma_uptrend: npt.NDArray[numpy.bool_] = numpy.repeat(True, data_length)
+            is_sma_downtrend: npt.NDArray[numpy.bool_] = is_sma_uptrend
         return is_ema_uptrend, is_ema_downtrend, is_sma_uptrend, is_sma_downtrend
 
     def _set_signals_from_prediction(
         self,
         prediction,
         _filters: utils.Filter,
-        candle_index,
+        candle_index: int,
         previous_signals: list,
         start_long_trades: list,
         start_short_trades: list,
-        is_bullishs,
-        is_bearishs,
-        alerts_bullish,
-        alerts_bearish,
-        is_bearish_changes,
-        is_bullish_changes,
+        is_bullishs: npt.NDArray[numpy.bool_],
+        is_bearishs: npt.NDArray[numpy.bool_],
+        # alerts_bullish: npt.NDArray[numpy.bool_],
+        # alerts_bearish: npt.NDArray[numpy.bool_],
+        # is_bearish_changes: npt.NDArray[numpy.bool_],
+        # is_bullish_changes: npt.NDArray[numpy.bool_],
         exit_short_trades: list,
         exit_long_trades: list,
         bars_since_green_entry: int,
@@ -684,7 +685,7 @@ class LorentzianClassificationScript(
 
         # utils.ExitTypes.SWITCH_SIDES doesnt need exits
 
-        if self.trading_mode.general_settings.exit_type == utils.ExitTypes.FOUR_BARS:
+        if self.trading_mode.order_settings.exit_type == utils.ExitTypes.FOUR_BARS:
             # Bar-Count Filters: Represents strict filters based on a pre-defined holding period of 4 bars
             bars_since_green_entry, bars_since_red_entry = self._handle_four_bar_exit(
                 bars_since_green_entry,
@@ -694,7 +695,7 @@ class LorentzianClassificationScript(
                 start_long_trade,
                 start_short_trade,
             )
-        # elif self.trading_mode.general_settings.exit_type == utils.ExitTypes.DYNAMIC:
+        # elif self.trading_mode.order_settings.exit_type == utils.ExitTypes.DYNAMIC:
         # TODO
         #     pass
 
@@ -831,8 +832,6 @@ class LorentzianClassificationScript(
         was_bullish_rates,
         is_bullish_rates,
         was_bearish_rates,
-        recentAtr,
-        historicalAtr,
         historical_predictions,
         start_long_trades,
         start_short_trades,
@@ -869,8 +868,6 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-            recentAtr,
-            historicalAtr,
             slightly_below_lows,
             slightly_above_highs,
         )
@@ -1050,8 +1047,6 @@ class LorentzianClassificationScript(
         was_bullish_rates,
         is_bullish_rates,
         was_bearish_rates,
-        recentAtr,
-        historicalAtr,
         slightly_below_lows,
         slightly_above_highs,
     ):
@@ -1088,8 +1083,7 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-            recentAtr,
-            historicalAtr,
+
             slightly_below_lows,
             slightly_above_highs,
         ) = basic_utilities.cut_data_to_same_len(
@@ -1126,8 +1120,6 @@ class LorentzianClassificationScript(
                 was_bullish_rates,
                 is_bullish_rates,
                 was_bearish_rates,
-                recentAtr,
-                historicalAtr,
                 slightly_below_lows,
                 slightly_above_highs,
             )
@@ -1279,26 +1271,7 @@ class LorentzianClassificationScript(
                 chart="main-chart",
             )
         if self.trading_mode.display_settings.enable_additional_plots:
-            if recentAtr:
-                additional_values_by_key["recentAtr"] = recentAtr
-                await plotting.plot(
-                    ctx,
-                    title="recentAtr",
-                    cache_value="recentAtr",
-                    chart="sub-chart",
-                )
-
-            if historicalAtr:
-                additional_values_by_key["historicalAtr"] = historicalAtr
-                await plotting.plot(
-                    ctx,
-                    title="historicalAtr",
-                    cache_value="historicalAtr",
-                    chart="sub-chart",
-                )
-
             additional_values_by_key["yhat2"] = yhat2
-
             additional_values_by_key["yt"] = y_train_series
             await plotting.plot(
                 ctx,
@@ -1423,12 +1396,12 @@ class LorentzianClassificationScript(
 
     def _get_all_filters(
         self,
-        candle_closes,
-        data_length,
-        candles_ohlc4,
-        candle_highs,
-        candle_lows,
-        user_selected_candles,
+        candle_closes: npt.NDArray[numpy.float64],
+        data_length: int,
+        candles_ohlc4: npt.NDArray[numpy.float64],
+        candle_highs: npt.NDArray[numpy.float64],
+        candle_lows: npt.NDArray[numpy.float64],
+        user_selected_candles: npt.NDArray[numpy.float64],
     ) -> utils.Filter:
 
         # Filter object for filtering the ML predictions
@@ -1438,7 +1411,7 @@ class LorentzianClassificationScript(
             is_sma_uptrend,
             is_sma_downtrend,
         ) = self._get_ma_filters(candle_closes, data_length)
-        volatility, recentAtr, historicalAtr = ml_extensions.filter_volatility(
+        volatility: npt.NDArray[numpy.bool_] = ml_extensions.filter_volatility(
             candle_highs=candle_highs,
             candle_lows=candle_lows,
             candle_closes=candle_closes,
@@ -1446,7 +1419,7 @@ class LorentzianClassificationScript(
             max_length=10,
             use_volatility_filter=self.trading_mode.filter_settings.use_volatility_filter,
         )
-        regime = ml_extensions.regime_filter(
+        regime: npt.NDArray[numpy.bool_] = ml_extensions.regime_filter(
             ohlc4=candles_ohlc4,
             highs=candle_highs,
             lows=candle_lows,
@@ -1469,7 +1442,7 @@ class LorentzianClassificationScript(
             is_sma_uptrend=is_sma_uptrend,
             is_sma_downtrend=is_sma_downtrend,
         )
-        return _filter, recentAtr, historicalAtr
+        return _filter
 
     def _get_feature_arrays(
         self,

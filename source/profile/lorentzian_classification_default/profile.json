@@ -1,0 +1,45 @@
+{
+    "config": {
+        "crypto-currencies": {
+            "Bitcoin": {
+                "pairs": [
+                    "BTC/USDT"
+                ]
+            }
+        },
+        "exchanges": {
+            "binance": {
+                "enabled": true,
+                "exchange-type": "spot"
+            }
+        },
+        "trader": {
+            "enabled": false,
+            "load-trade-history": true
+        },
+        "trader-simulator": {
+            "enabled": true,
+            "fees": {
+                "maker": 0.01,
+                "taker": 0.06
+            },
+            "starting-portfolio": {
+                "BTC": 0,
+                "USDT": 10000
+            }
+        },
+        "trading": {
+            "reference-market": "USDT",
+            "risk": 0.5
+        }
+    },
+    "profile": {
+        "avatar": "matrix-icon.png",
+        "description": "see https://github.com/techfreaque/octobot-lorentzian-classification for more details",
+        "id": "lorentzian_classification_default",
+        "imported": true,
+        "name": "Lorentzian Classification",
+        "origin_url": "https://raw.githubusercontent.com/techfreaque/octobot-lorentzian-classification/main/releases/profile/lorentzian-classification_profile.zip",
+        "read_only": false
+    }
+}

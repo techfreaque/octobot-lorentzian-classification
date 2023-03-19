@@ -29,26 +29,24 @@ def series_from(
 class GeneralSettings:
     def __init__(
         self,
-        source: float,
+        source: str,
         neighbors_count: int,
         max_bars_back: int,
         color_compression: int,
         live_history_size: int,
-        exit_type: str,
         use_remote_fractals: bool,
         use_down_sampling: bool,
         only_train_on_every_x_bars: typing.Optional[int] = None,
     ):
-        self.source: float = source
+        self.source: str = source
         self.neighbors_count: int = neighbors_count
         self.last_distance_neighbors_count: int = round(neighbors_count * 3 / 4)
         self.max_bars_back: int = max_bars_back
         self.color_compression: int = color_compression
         self.live_history_size: int = live_history_size
-        self.exit_type: str = exit_type
         self.use_remote_fractals: bool = use_remote_fractals
         self.use_down_sampling: bool = use_down_sampling
-        self.only_train_on_every_x_bars: bool = only_train_on_every_x_bars
+        self.only_train_on_every_x_bars: typing.Optional[int] = only_train_on_every_x_bars
 
 
 class SignalDirection:
@@ -112,17 +110,19 @@ class KernelSettings:
 class LorentzianOrderSettings:
     def __init__(
         self,
-        long_order_volume: float,
-        short_order_volume: float,
+        long_order_volume: typing.Optional[float],
+        short_order_volume: typing.Optional[float],
         enable_short_orders: bool,
         enable_long_orders: bool,
-        leverage: int,
+        exit_type: str,
+        leverage: typing.Optional[int] = None,
     ):
-        self.long_order_volume: float = long_order_volume
-        self.short_order_volume: float = short_order_volume
+        self.long_order_volume: typing.Optional[float] = long_order_volume
+        self.short_order_volume: typing.Optional[float] = short_order_volume
         self.enable_short_orders: bool = enable_short_orders
         self.enable_long_orders: bool = enable_long_orders
-        self.leverage: int = leverage
+        self.leverage: typing.Optional[int] = leverage
+        self.exit_type: str = exit_type
 
 
 class FilterSettings:
@@ -248,7 +248,7 @@ class Filter:
         self.is_sma_downtrend = is_sma_downtrend
 
 
-def shift_data(data_source: list or npt.NDArray[any], shift_by: int = 1):
+def shift_data(data_source: typing.Union[list, npt.NDArray[any]], shift_by: int = 1):
     cutted_data = data_source[shift_by:]
     shifted_data = data_source[:-shift_by]
     return cutted_data, shifted_data

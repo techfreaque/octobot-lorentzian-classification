@@ -1,4 +1,4 @@
-def initialize_scripted_trading_mode(trading_mode):
+def initialize_scripted_trading_mode(trading_mode)->bool:
     try:
         import backtesting_script
 

@@ -9,9 +9,9 @@ def rationalQuadratic(
     look_back: int,
     relative_weight: float,
     start_at_Bar: int,
-):
+) -> npt.NDArray[numpy.float64]:
     yhat: typing.List[float] = []
-    start_at_Bar += 1 # because this is 1 on tv: _size = array.size(array.from(_src))
+    start_at_Bar += 1  # because this is 1 on tv: _size = array.size(array.from(_src))
     for index in range(start_at_Bar, len(data_source)):
         _currentWeight: float = 0
         _cumulativeWeight: float = 0
@@ -33,7 +33,7 @@ def rationalQuadratic(
 
 def gaussian(
     data_source: npt.NDArray[numpy.float64], look_back: int, start_at_Bar: int
-):
+) -> npt.NDArray[numpy.float64]:
     start_at_Bar += 1
     yhat: typing.List[float] = []
     for index in range(start_at_Bar, len(data_source)):

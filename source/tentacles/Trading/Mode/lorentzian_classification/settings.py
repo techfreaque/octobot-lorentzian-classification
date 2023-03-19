@@ -1,3 +1,4 @@
+import typing
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as enums
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
@@ -11,6 +12,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
     feature_engineering_settings: utils.FeatureEngineeringSettings = None
     kernel_settings: utils.KernelSettings = None
     display_settings: utils.DisplaySettings = None
+    order_settings: utils.LorentzianOrderSettings = None
     show_trade_stats: bool = None
     use_worst_case_estimates: bool = None
     GENERAL_SETTINGS_NAME = "general_settings"
@@ -39,6 +41,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="General Settings",
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+            },
         )
         source = self.UI.user_input(
             "candle_source",
@@ -54,6 +60,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 "ohlc4",
             ],
             title="Candle source",
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
             parent_input_name=self.GENERAL_SETTINGS_NAME,
             other_schema_values={"description": "Source of the input data"},
         )
@@ -66,25 +75,38 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             max_val=100,
             title="Neighbors Count",
             parent_input_name=self.GENERAL_SETTINGS_NAME,
-            other_schema_values={"description": "Number of neighbors to consider"},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
+            other_schema_values={
+                "description": "Number of similar neighbors to consider "
+                "for the prediction."
+            },
         )
-        use_remote_fractals = self.UI.user_input(
-            "use_remote_fractals",
-            enums.UserInputTypes.BOOLEAN,
-            False,
+        default_max_bars_back = (
+            2000
+            if self.config[commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT]
+            >= 2000
+            else self.config[commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT]
+        )
+        max_bars_back = self.UI.user_input(
+            "max_bars_back",
+            enums.UserInputTypes.INT,
+            default_max_bars_back,
             inputs,
-            title="Use Remote Fractals",
+            min_val=1,
+            max_val=self.config[
+                commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT
+            ],
+            title="Max Bars Back",
             parent_input_name=self.GENERAL_SETTINGS_NAME,
             other_schema_values={
-                "description": "When the option is enabled, the model will utilize "
-                "training data from the first bar up to a maximum of X bars in the "
-                "past. On the other hand, if the option is disabled, the model will use"
-                " training data from the current bar up to a maximum of X bars in the "
-                "past. When enabled during backtesting, the starting index for each "
-                'candle iteration will be determined by the "Amount of historical '
-                'live candles" setting. '
-                "Although this approach may yield outcomes that differ from those "
-                "observed on TradingView, it can provide valuable insights. "
+                "description": "Amount of historical candles to use as training data. "
+                "To increase the max allowed bars back, change 'Amount of historical "
+                "candles' in the TimeFrameStrategyEvaluator settings."
+            },
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
             },
         )
         use_down_sampling = self.UI.user_input(
@@ -99,6 +121,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 "candle as training data within the max bars back. This will speed up "
                 "classification and allows you to use a higher max bars back instead, "
                 "which will result in a more diverse training data."
+            },
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         only_train_on_every_x_bars = None
@@ -117,19 +142,31 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "This will speed up classification and allows you to increase the "
                     "max bars back."
                 },
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
             )
 
-        max_bars_back = self.UI.user_input(
-            "max_bars_back",
-            enums.UserInputTypes.INT,
-            2000,
+        use_remote_fractals = self.UI.user_input(
+            "use_remote_fractals",
+            enums.UserInputTypes.BOOLEAN,
+            False,
             inputs,
-            min_val=1,
-            title="Max Bars Back",
+            title="Use Remote Fractals",
             parent_input_name=self.GENERAL_SETTINGS_NAME,
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+            },
             other_schema_values={
-                "description": 'Make sure the "Amount of historical live candles" in '
-                "the TimeframeStrategy is at least 200 bars more than this value"
+                "description": "When the option is enabled, the model will utilize "
+                "training data from the first bar up to a maximum of X bars in the "
+                "past. On the other hand, if the option is disabled, the model will use"
+                " training data from the current bar up to a maximum of X bars in the "
+                "past. When enabled during backtesting, the starting index for each "
+                'candle iteration will be determined by the "Amount of historical '
+                'live candles" setting. '
+                "Although this approach may yield outcomes that differ from those "
+                "observed on TradingView, it can provide valuable insights. "
             },
         )
         color_compression = 1
@@ -147,26 +184,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
         #         "intensity of the color scale."
         #     },
         # )
-        exit_type = self.UI.user_input(
-            "exit_type",
-            enums.UserInputTypes.OPTIONS,
-            utils.ExitTypes.SWITCH_SIDES,
-            inputs,
-            options=[
-                utils.ExitTypes.FOUR_BARS,
-                # utils.ExitTypes.DYNAMIC,
-                utils.ExitTypes.SWITCH_SIDES,
-            ],
-            title="Exit Type",
-            parent_input_name=self.GENERAL_SETTINGS_NAME,
-            other_schema_values={
-                "description": "Four bars: Exits will occour exactly 4 bars "
-                "after the entry. - "
-                "Dynamic: attempts to let profits ride by dynamically adjusting "
-                "the exit threshold based on kernel regression logic. - "
-                "Switch sides: The position will switch sides on each signal.",
-            },
-        )
+
         self.general_settings = utils.GeneralSettings(
             source=source,
             neighbors_count=neighbors_count,
@@ -178,7 +196,6 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             ],
             max_bars_back=max_bars_back,
             color_compression=color_compression,
-            exit_type=exit_type,
         )
         # Trade Stats Settings
         # Note: The trade stats section is NOT intended to be used as a replacement for
@@ -229,6 +246,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Feature Engineering Settings",
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+            },
         )
         plot_features = self.UI.user_input(
             "plot_features",
@@ -523,6 +544,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Display Settings",
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+            },
         )
         self.display_settings: utils.DisplaySettings = utils.DisplaySettings(
             show_bar_colors=False,
@@ -592,6 +617,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Kernel Settings",
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+            },
         )
         self.kernel_settings: utils.KernelSettings = utils.KernelSettings(
             use_kernel_filter=self.UI.user_input(
@@ -601,6 +630,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 inputs,
                 title="Trade with Kernel",
                 parent_input_name=self.KERNEL_SETTINGS_NAME,
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                },
             ),
             show_kernel_estimate=self.UI.user_input(
                 "show_kernel_estimate",
@@ -609,6 +641,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 inputs,
                 title="Show Kernel Estimate",
                 parent_input_name=self.KERNEL_SETTINGS_NAME,
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                },
             ),
             use_kernel_smoothing=self.UI.user_input(
                 "use_kernel_smoothing",
@@ -622,6 +657,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "to smoothen kernel color changes. This often "
                     "results in less color transitions overall and "
                     "may result in more ML entry signals being generated."
+                },
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             lookback_window=self.UI.user_input(
@@ -637,6 +675,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "description": "The number of bars used for the estimation. This is"
                     " a sliding value that represents the most recent historical bars. "
                     "Recommended range: 3-50"
+                },
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             relative_weighting=self.UI.user_input(
@@ -655,6 +696,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     " of the Rational Quadratic Kernel will become identical to the "
                     "Gaussian kernel. Recommended range: 0.25-25"
                 },
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                },
             ),
             regression_level=self.UI.user_input(
                 "regression_level",
@@ -671,6 +715,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     " are a tighter fit. Larger values are a looser fit. Recommended "
                     "range: 2-25"
                 },
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                },
             ),
             lag=self.UI.user_input(
                 "lag",
@@ -685,6 +732,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "description": "Lag for crossover detection. Lower values result in"
                     " earlier crossovers. Recommended range: 1-2"
                 },
+                editor_options={
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                },
             ),
         )
 
@@ -696,10 +746,35 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Order Settings",
             editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+            },
+        )
+        exit_type = self.UI.user_input(
+            "exit_type",
+            enums.UserInputTypes.OPTIONS,
+            utils.ExitTypes.SWITCH_SIDES,
+            inputs,
+            options=[
+                utils.ExitTypes.FOUR_BARS,
+                # utils.ExitTypes.DYNAMIC,
+                utils.ExitTypes.SWITCH_SIDES,
+            ],
+            title="Exit Type",
+            parent_input_name=self.ORDER_SETTINGS_NAME,
+            other_schema_values={
+                "description": "Four bars: Exits will occour exactly 4 bars "
+                "after the entry. - "
+                "Dynamic: attempts to let profits ride by dynamically adjusting "
+                "the exit threshold based on kernel regression logic. - "
+                "Switch sides: The position will switch sides on each signal.",
+            },
+            editor_options={
                 matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
             },
         )
-        leverage: int = None
+
+        leverage: typing.Optional[int] = None
         if self.exchange_manager.is_future:
             leverage = self.UI.user_input(
                 "leverage",
@@ -718,7 +793,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     " to use for futures trades"
                 },
             )
-        long_order_volume: float = None
+        long_order_volume: typing.Optional[float] = None
         enable_long_orders: bool = self.UI.user_input(
             "enable_long_orders",
             enums.UserInputTypes.BOOLEAN,
@@ -745,7 +820,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 },
             )
         enable_short_orders: bool = False
-        short_order_volume: float = None
+        short_order_volume: typing.Optional[float] = None
         if self.exchange_manager.is_future:
             enable_short_orders = self.UI.user_input(
                 "enable_short_orders",
@@ -779,6 +854,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 long_order_volume=long_order_volume,
                 enable_long_orders=enable_long_orders,
                 leverage=leverage,
+                exit_type=exit_type,
             )
         )
 
@@ -790,7 +866,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Filter Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
         volatility_filter_name = "volatility_filter_settings"

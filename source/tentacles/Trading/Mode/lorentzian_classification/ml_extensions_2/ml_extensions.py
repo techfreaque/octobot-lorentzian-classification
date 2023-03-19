@@ -115,7 +115,7 @@ def regime_filter(
 ) -> npt.NDArray[numpy.bool_]:
     data_length = len(ohlc4)
     if not use_regime_filter:
-        return numpy.array([True] * data_length)
+        return numpy.repeat(True, len(ohlc4))
     # Calculate the slope of the curve.
     values_1: list = [0.0]
     values_2: list = [0.0]
@@ -130,21 +130,21 @@ def regime_filter(
         alpha = (-pow(omega, 2) + math.sqrt(pow(omega, 4) + 16 * pow(omega, 2))) / 8
         klmfs.append(alpha * ohlc4[index] + (1 - alpha) * klmfs[-1])
         abs_curve_slope.append(abs(klmfs[-1] - klmfs[-2]))
-    abs_curve_slope: npt.NDArray[numpy.float64] = numpy.array(abs_curve_slope)
+    abs_curve_slope_np: npt.NDArray[numpy.float64] = numpy.array(abs_curve_slope)
     exponentialAverageAbsCurveSlope: npt.NDArray[numpy.float64] = tulipy.ema(
-        abs_curve_slope, 200
+        abs_curve_slope_np, 200
     )
     (
         exponentialAverageAbsCurveSlope,
-        abs_curve_slope,
+        abs_curve_slope_np,
     ) = basic_utils.cut_data_to_same_len(
-        (exponentialAverageAbsCurveSlope, abs_curve_slope)
+        (exponentialAverageAbsCurveSlope, abs_curve_slope_np)
     )
     normalized_slope_decline: npt.NDArray[numpy.float64] = (
-        abs_curve_slope - exponentialAverageAbsCurveSlope
+        abs_curve_slope_np - exponentialAverageAbsCurveSlope
     ) / exponentialAverageAbsCurveSlope
     # Calculate the slope of the curve.
-    
+
     return normalized_slope_decline >= threshold
 
 
@@ -158,7 +158,7 @@ def filter_adx(
 ) -> npt.NDArray[numpy.bool_]:
     data_length: int = len(candle_closes)
     if not use_adx_filter:
-        return numpy.array([True] * data_length)
+        return numpy.repeat(True, len(candle_closes))
     tr_smooths: typing.List[float] = [0.0]
     smoothneg_movements: typing.List[float] = [0.0]
     smooth_directional_movement_plus: typing.List[float] = [0.0]
@@ -216,10 +216,10 @@ def filter_volatility(
     use_volatility_filter: bool = True,
 ) -> npt.NDArray[numpy.bool_]:
     if not use_volatility_filter:
-        return numpy.array([True] * len(candle_closes)), None, None
+        return numpy.repeat(True, len(candle_closes))
     recentAtr = tulipy.atr(candle_highs, candle_lows, candle_closes, min_length)
     historicalAtr = tulipy.atr(candle_highs, candle_lows, candle_closes, max_length)
     recentAtr, historicalAtr = basic_utils.cut_data_to_same_len(
         (recentAtr, historicalAtr)
     )
-    return recentAtr > historicalAtr, recentAtr, historicalAtr
+    return recentAtr > historicalAtr
