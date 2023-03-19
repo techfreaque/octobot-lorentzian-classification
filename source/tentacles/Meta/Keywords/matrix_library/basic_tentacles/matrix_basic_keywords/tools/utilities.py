@@ -1,4 +1,5 @@
 import time
+import typing
 
 import octobot_commons.logging.logging_util as logging_util
 import octobot_commons.symbols.symbol_util as symbol_util
@@ -53,7 +54,7 @@ def get_pre_order_data(exchange_manager, symbol):
     return fees_currency_side, symbol_market
 
 
-def cut_data_to_same_len(data_set: tuple or list, get_list=False):
+def cut_data_to_same_len(data_set: typing.Union[tuple, list], get_list: bool = False):
     # data tuple in and out
     min_len = None
     cutted_data: list = []

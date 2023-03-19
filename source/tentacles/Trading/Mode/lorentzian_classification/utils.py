@@ -33,17 +33,22 @@ class GeneralSettings:
         neighbors_count: int,
         max_bars_back: int,
         color_compression: int,
+        live_history_size: int,
         exit_type: str,
         use_remote_fractals: bool,
         use_down_sampling: bool,
+        only_train_on_every_x_bars: typing.Optional[int] = None,
     ):
         self.source: float = source
         self.neighbors_count: int = neighbors_count
+        self.last_distance_neighbors_count: int = round(neighbors_count * 3 / 4)
         self.max_bars_back: int = max_bars_back
         self.color_compression: int = color_compression
+        self.live_history_size: int = live_history_size
         self.exit_type: str = exit_type
         self.use_remote_fractals: bool = use_remote_fractals
         self.use_down_sampling: bool = use_down_sampling
+        self.only_train_on_every_x_bars: bool = only_train_on_every_x_bars
 
 
 class SignalDirection:

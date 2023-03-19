@@ -1,6 +1,7 @@
+import octobot_commons.constants as commons_constants
 import octobot_commons.enums as enums
-from octobot_trading.modes.script_keywords import basic_keywords
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
 
@@ -39,126 +40,145 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="General Settings",
         )
-        # Settings object for user-defined settings
-        self.general_settings = utils.GeneralSettings(
-            source=self.UI.user_input(
-                "candle_source",
-                enums.UserInputTypes.OPTIONS,
+        source = self.UI.user_input(
+            "candle_source",
+            enums.UserInputTypes.OPTIONS,
+            enums.PriceStrings.STR_PRICE_CLOSE.value,
+            inputs,
+            options=[
                 enums.PriceStrings.STR_PRICE_CLOSE.value,
-                inputs,
-                options=[
-                    enums.PriceStrings.STR_PRICE_CLOSE.value,
-                    enums.PriceStrings.STR_PRICE_OPEN.value,
-                    enums.PriceStrings.STR_PRICE_HIGH.value,
-                    enums.PriceStrings.STR_PRICE_LOW.value,
-                    "hlc3",
-                    "ohlc4",
-                ],
-                title="Candle source",
-                parent_input_name=self.GENERAL_SETTINGS_NAME,
-                other_schema_values={"description": "Source of the input data"},
-            ),
-            neighbors_count=self.UI.user_input(
-                "neighbors_count",
+                enums.PriceStrings.STR_PRICE_OPEN.value,
+                enums.PriceStrings.STR_PRICE_HIGH.value,
+                enums.PriceStrings.STR_PRICE_LOW.value,
+                "hlc3",
+                "ohlc4",
+            ],
+            title="Candle source",
+            parent_input_name=self.GENERAL_SETTINGS_NAME,
+            other_schema_values={"description": "Source of the input data"},
+        )
+        neighbors_count = self.UI.user_input(
+            "neighbors_count",
+            enums.UserInputTypes.INT,
+            8,
+            inputs,
+            min_val=1,
+            max_val=100,
+            title="Neighbors Count",
+            parent_input_name=self.GENERAL_SETTINGS_NAME,
+            other_schema_values={"description": "Number of neighbors to consider"},
+        )
+        use_remote_fractals = self.UI.user_input(
+            "use_remote_fractals",
+            enums.UserInputTypes.BOOLEAN,
+            False,
+            inputs,
+            title="Use Remote Fractals",
+            parent_input_name=self.GENERAL_SETTINGS_NAME,
+            other_schema_values={
+                "description": "When the option is enabled, the model will utilize "
+                "training data from the first bar up to a maximum of X bars in the "
+                "past. On the other hand, if the option is disabled, the model will use"
+                " training data from the current bar up to a maximum of X bars in the "
+                "past. When enabled during backtesting, the starting index for each "
+                'candle iteration will be determined by the "Amount of historical '
+                'live candles" setting. '
+                "Although this approach may yield outcomes that differ from those "
+                "observed on TradingView, it can provide valuable insights. "
+            },
+        )
+        use_down_sampling = self.UI.user_input(
+            "use_down_sampling",
+            enums.UserInputTypes.BOOLEAN,
+            True,
+            inputs,
+            title="Use Down Sampling",
+            parent_input_name=self.GENERAL_SETTINGS_NAME,
+            other_schema_values={
+                "description": "When enabled, the strategy will only use every Xth "
+                "candle as training data within the max bars back. This will speed up "
+                "classification and allows you to use a higher max bars back instead, "
+                "which will result in a more diverse training data."
+            },
+        )
+        only_train_on_every_x_bars = None
+        if use_down_sampling:
+            only_train_on_every_x_bars = self.UI.user_input(
+                "only_train_on_every_x_bars",
                 enums.UserInputTypes.INT,
-                8,
+                4,
                 inputs,
-                min_val=1,
-                max_val=100,
-                title="Neighbors Count",
-                parent_input_name=self.GENERAL_SETTINGS_NAME,
-                other_schema_values={"description": "Number of neighbors to consider"},
-            ),
-            use_remote_fractals=self.UI.user_input(
-                "use_remote_fractals",
-                enums.UserInputTypes.BOOLEAN,
-                False,
-                inputs,
-                title="Use Remote Fractals",
+                min_val=2,
+                title="Only train on every X bars",
                 parent_input_name=self.GENERAL_SETTINGS_NAME,
                 other_schema_values={
-                    "description": "Extends back to the beginning of a chart's history"
-                    " to pick up exotic fractals for training a model. This usually "
-                    "is not as accurate but can be useful, for additional insight. "
-                    "This option enabled, will cause signals reprinting on each bar "
-                    "close "
+                    "description": "Instead of using every bar as training data, "
+                    "you can instead skip candles and only train on every X bars. "
+                    "This will speed up classification and allows you to increase the "
+                    "max bars back."
                 },
-            ),
-            use_down_sampling=self.UI.user_input(
-                "use_down_sampling",
-                enums.UserInputTypes.BOOLEAN,
-                True,
-                inputs,
-                title="Use Down Sampling",
-                parent_input_name=self.GENERAL_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "When enabled, the strategy will only use every 4th "
-                    "candle as training data within the max bars back. This allows you"
-                    " to use a higher max bars back, which will result in a more "
-                    "diverse training data."
-                },
-            ),
-            max_bars_back=self.UI.user_input(
-                "max_bars_back",
-                enums.UserInputTypes.INT,
-                2000,
-                inputs,
-                min_val=1,
-                title="Max Bars Back",
-                parent_input_name=self.GENERAL_SETTINGS_NAME,
-                other_schema_values={
-                    "description": 'Make sure the "Amount of historical live candles" in '
-                    "the TimeframeStrategy is at least 200 bars more than this value"
-                },
-            ),
-            color_compression=1,
-            # color_compression=self.UI.user_input(
-            #     "color_compression",
-            #     enums.UserInputTypes.INT,
-            #     1,
-            #     inputs,
-            #     min_val=1,
-            #     max_val=10,
-            #     title="Color Compression",
-            #     parent_input_name=self.GENERAL_SETTINGS_NAME,
-            #     other_schema_values={
-            #         "description": "Compression factor for adjusting the "
-            #         "intensity of the color scale."
-            #     },
-            # ),
-            exit_type=self.UI.user_input(
-                "exit_type",
-                enums.UserInputTypes.OPTIONS,
+            )
+
+        max_bars_back = self.UI.user_input(
+            "max_bars_back",
+            enums.UserInputTypes.INT,
+            2000,
+            inputs,
+            min_val=1,
+            title="Max Bars Back",
+            parent_input_name=self.GENERAL_SETTINGS_NAME,
+            other_schema_values={
+                "description": 'Make sure the "Amount of historical live candles" in '
+                "the TimeframeStrategy is at least 200 bars more than this value"
+            },
+        )
+        color_compression = 1
+        # color_compression=self.UI.user_input(
+        #     "color_compression",
+        #     enums.UserInputTypes.INT,
+        #     1,
+        #     inputs,
+        #     min_val=1,
+        #     max_val=10,
+        #     title="Color Compression",
+        #     parent_input_name=self.GENERAL_SETTINGS_NAME,
+        #     other_schema_values={
+        #         "description": "Compression factor for adjusting the "
+        #         "intensity of the color scale."
+        #     },
+        # )
+        exit_type = self.UI.user_input(
+            "exit_type",
+            enums.UserInputTypes.OPTIONS,
+            utils.ExitTypes.SWITCH_SIDES,
+            inputs,
+            options=[
+                utils.ExitTypes.FOUR_BARS,
+                # utils.ExitTypes.DYNAMIC,
                 utils.ExitTypes.SWITCH_SIDES,
-                inputs,
-                options=[
-                    utils.ExitTypes.FOUR_BARS,
-                    # utils.ExitTypes.DYNAMIC,
-                    utils.ExitTypes.SWITCH_SIDES,
-                ],
-                title="Exit Type",
-                parent_input_name=self.GENERAL_SETTINGS_NAME,
-                other_schema_values={
-                    "description": "Four bars: Exits will occour exactly 4 bars "
-                    "after the entry. - "
-                    "Dynamic: attempts to let profits ride by dynamically adjusting "
-                    "the exit threshold based on kernel regression logic. - "
-                    "Switch sides: The position will switch sides on each signal.",
-                },
-            ),
-            # use_dynamic_exits=self.UI.user_input(
-            #     "use_dynamic_exits",
-            #     enums.UserInputTypes.BOOLEAN,
-            #     False,
-            #     inputs,
-            #     title="Use Dynamic Exits",
-            #     parent_input_name=self.GENERAL_SETTINGS_NAME,
-            #     other_schema_values={
-            #         "description": "Dynamic exits attempt to let profits ride by "
-            #         "dynamically adjusting the exit threshold based "
-            #         "on kernel regression logic."
-            #     },
-            # ),
+            ],
+            title="Exit Type",
+            parent_input_name=self.GENERAL_SETTINGS_NAME,
+            other_schema_values={
+                "description": "Four bars: Exits will occour exactly 4 bars "
+                "after the entry. - "
+                "Dynamic: attempts to let profits ride by dynamically adjusting "
+                "the exit threshold based on kernel regression logic. - "
+                "Switch sides: The position will switch sides on each signal.",
+            },
+        )
+        self.general_settings = utils.GeneralSettings(
+            source=source,
+            neighbors_count=neighbors_count,
+            use_remote_fractals=use_remote_fractals,
+            use_down_sampling=use_down_sampling,
+            only_train_on_every_x_bars=only_train_on_every_x_bars,
+            live_history_size=self.config[
+                commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT
+            ],
+            max_bars_back=max_bars_back,
+            color_compression=color_compression,
+            exit_type=exit_type,
         )
         # Trade Stats Settings
         # Note: The trade stats section is NOT intended to be used as a replacement for
@@ -239,7 +259,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Feature 1",
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+            },
             parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
         )
         f1_string = self.UI.user_input(
@@ -281,7 +303,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Feature 2",
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+            },
             parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
         )
         f2_string = self.UI.user_input(
@@ -334,7 +358,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 inputs,
                 title="Feature 3",
                 editor_options={
-                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                 },
                 parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
             )
@@ -382,7 +406,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     inputs,
                     title="Feature 4",
                     editor_options={
-                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                        matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                     },
                     parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
                 )
@@ -431,7 +455,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                         inputs,
                         title="Feature 5",
                         editor_options={
-                            enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                            matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                         },
                         parent_input_name=self.FEATURE_ENGINEERING_SETTINGS_NAME,
                     )
@@ -671,7 +695,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Order Settings",
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+            },
         )
         leverage: int = None
         if self.exchange_manager.is_future:
@@ -685,10 +711,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Leverage",
                 parent_input_name=self.ORDER_SETTINGS_NAME,
                 editor_options={
-                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                 },
                 other_schema_values={
-                    enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Leverage"
+                    matrix_enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Leverage"
                     " to use for futures trades"
                 },
             )
@@ -700,7 +726,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Enable long tading",
             parent_input_name=self.ORDER_SETTINGS_NAME,
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
         )
         if enable_long_orders:
             long_order_volume = self.UI.user_input(
@@ -713,7 +741,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="% of available balance to use for long trades",
                 parent_input_name=self.ORDER_SETTINGS_NAME,
                 editor_options={
-                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                 },
             )
         enable_short_orders: bool = False
@@ -727,7 +755,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Enable short tading",
                 parent_input_name=self.ORDER_SETTINGS_NAME,
                 editor_options={
-                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                 },
             )
             if enable_short_orders:
@@ -741,7 +769,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     title="% of available balance to use for short trades",
                     parent_input_name=self.ORDER_SETTINGS_NAME,
                     editor_options={
-                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                        matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                     },
                 )
         self.order_settings: utils.LorentzianOrderSettings = (
@@ -761,7 +789,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             None,
             inputs,
             title="Filter Settings",
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+            },
         )
         volatility_filter_name = "volatility_filter_settings"
         self.UI.user_input(
@@ -771,7 +801,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Volatility Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
         )
         use_volatility_filter = self.UI.user_input(
             "use_volatility_filter",
@@ -803,7 +835,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Regime Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
         )
         use_regime_filter = self.UI.user_input(
             "use_regime_filter",
@@ -847,7 +881,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="ADX Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
         )
         use_adx_filter = self.UI.user_input(
             "use_adx_filter",
@@ -890,7 +926,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="EMA Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
-            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
+            editor_options={
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+            },
         )
         use_ema_filter = self.UI.user_input(
             "use_ema_filter",
@@ -933,7 +971,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="SMA Filter Settings",
             parent_input_name=self.FILTER_SETTINGS_NAME,
             other_schema_values={
-                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         use_sma_filter = self.UI.user_input(

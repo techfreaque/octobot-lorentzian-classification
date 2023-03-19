@@ -1,3 +1,4 @@
+import typing
 import octobot_commons.logging as logging
 import octobot_commons.enums as commons_enums
 import octobot_commons.errors as commons_errors
@@ -113,7 +114,7 @@ class AbstractBaseModeProducer(
         candle: dict = None,
         kline: dict = None,
         init_call: bool = False,
-        action: str or dict = None,
+        action: typing.Optional[str] = None,
     ):
         context = context_management.get_full_context(
             self.trading_mode,
@@ -172,7 +173,7 @@ class AbstractBaseModeProducer(
                 self.exchange_manager.bot_id, self.exchange_name, symbol
             ).set_initialized_flags(initialized, (time_frame,))
 
-    async def make_strategy(self, context, action: dict or str = None):
+    async def make_strategy(self, context, action: typing.Optional[str] = None):
         pass
 
     def log_last_call_by_time_frame_and_symbol(

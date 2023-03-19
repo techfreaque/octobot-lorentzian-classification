@@ -31,14 +31,14 @@ class SpotMaster3000ModeSettings(
     limit_buy_offset: float = None
     limit_sell_offset: float = None
     limit_max_age_in_bars: int = None
-    spot_master_name = "spot_master_3000"
-    balancing_settings_name = "balancing_settings"
-    order_settings_name = "order_settings"
-    order_type = None
+    spot_master_name: str = "spot_master_3000"
+    balancing_settings_name: str = "balancing_settings"
+    order_settings_name: str = "order_settings"
+    order_type: typing.Optional[str] = None
     available_coins: typing.List[str] = []
     available_symbols: typing.List[str] = []
-    round_orders: bool = None
-    round_orders_max_value: float = None
+    round_orders: bool = False
+    round_orders_max_value: typing.Optional[float] = None
 
     SUPPORTS_PLOT_SIGNALS: bool = False
     enable_plot_portfolio_p: bool = None
@@ -464,35 +464,37 @@ class SpotMaster3000ModeSettings(
                             mode="markers",
                         )
 
-    def _try_converting_with_multiple_pairs(self, currency, quantity):
-        # try with two pairs
-        # for example: BTC/ETH      ->    BTC/USDT
-        # first covert ETH -> BTC and then BTC -> USDT
-        for symbol in symbol_data.get_config_symbols(
-            self.portfolio_manager.exchange_manager.config, True
-        ):
-            if symbol.startswith(currency):
-                first_ref_market = symbol_util.parse_symbol(symbol).quote
-                second_symbol = (
-                    f"{first_ref_market}/{self.portfolio_manager.reference_market}"
-                )
-                if (
-                    all(
-                        self.portfolio_manager.exchange_manager.symbol_exists(s)
-                        for s in (symbol, second_symbol)
-                    )
-                    and currency not in self.missing_currency_data_in_exchange
-                ):
-                    if first_ref_market_value := (
-                        self.convert_currency_value_using_last_prices(
-                            quantity, currency, first_ref_market
-                        )
-                    ):
-                        if ref_market_value := (
-                            self.convert_currency_value_using_last_prices(
-                                first_ref_market_value,
-                                first_ref_market,
-                                self.portfolio_manager.reference_market,
-                            )
-                        ):
-                            return ref_market_value
+    # def _try_converting_with_multiple_pairs(self, currency:str, quantity):
+    #     # try with two pairs
+    #     # for example: BTC/ETH      ->    BTC/USDT
+    #     # first covert ETH -> BTC and then BTC -> USDT
+    #     for symbol in symbol_data.get_config_symbols(
+    #         self.portfolio_manager.exchange_manager.config, True
+    #     ):
+    #         if symbol.startswith(currency):
+    #             first_ref_market = symbol_util.parse_symbol(symbol).quote
+    #             second_symbol = (
+    #                 f"{first_ref_market}/{self.portfolio_manager.reference_market}"
+    #             )
+    #             if (
+    #                 all(
+    #                     self.portfolio_manager.exchange_manager.symbol_exists(s)
+    #                     for s in (symbol, second_symbol)
+    #                 )
+    #                 and currency not in self.missing_currency_data_in_exchange
+    #             ):
+    #                 first_ref_market_value = (
+    #                     self.convert_currency_value_using_last_prices(
+    #                         quantity, currency, first_ref_market
+    #                     )
+    #                 )
+    #                 if first_ref_market_value:
+    #                     ref_market_value = (
+    #                         self.convert_currency_value_using_last_prices(
+    #                             first_ref_market_value,
+    #                             first_ref_market,
+    #                             self.portfolio_manager.reference_market,
+    #                         )
+    #                     )
+    #                     if ref_market_value:
+    #                         return ref_market_value

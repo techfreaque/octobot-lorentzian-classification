@@ -83,11 +83,10 @@ class RunAnalysisBaseDataGenerator:
         await self.load_historical_values()
         await self.generate_transactions()
 
-        self.total_start_balance_in_ref_market = self.starting_portfolio[
-            self.ref_market
-        ][
-            "total"
-        ]  # todo all coins balance
+        # todo all coins balance
+        self.total_start_balance_in_ref_market = self.starting_portfolio.get(
+            self.ref_market, {}
+        ).get("total", 0)
         self.pairs = list(self.trades_data)
         self._set_longest_candles()
 

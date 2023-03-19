@@ -117,6 +117,7 @@ import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_setting
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order as market_order
+import tentacles.Trading.Mode.lorentzian_classification.classification_utils as classification_utils
 
 import tentacles.Trading.Mode.lorentzian_classification.kernel_functions.kernel as kernel
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
@@ -294,9 +295,7 @@ class LorentzianClassificationScript(
         # =================================
 
         # This model specializes specifically in predicting the direction of price
-        # action over the course of the next 4 bars.
-        # To avoid complications with the ML model, this value is hardcoded to 4 bars
-        # but support for other training lengths may be added in the future.
+        # action over the course of the next general_settings.only_train_on_every_x_bars.
 
         previous_signals: list = [utils.SignalDirection.neutral]
         historical_predictions: list = []
@@ -325,7 +324,7 @@ class LorentzianClassificationScript(
                 bars_since_red_entry,
             ) = self._classify_current_candle(
                 y_train_series=y_train_series,
-                candle_index=candle_index,
+                current_candle_index=candle_index,
                 feature_arrays=feature_arrays,
                 historical_predictions=historical_predictions,
                 _filters=_filters,
@@ -411,7 +410,7 @@ class LorentzianClassificationScript(
     def _classify_current_candle(
         self,
         y_train_series: npt.NDArray[numpy.float64],
-        candle_index: int,
+        current_candle_index: int,
         feature_arrays: utils.FeatureArrays,
         historical_predictions: list,
         _filters: utils.Filter,
@@ -434,6 +433,7 @@ class LorentzianClassificationScript(
         is_sell_signals,
         missing_data_length,
     ) -> typing.Tuple[int, int]:
+
         # =========================
         # ====  Core ML Logic  ====
         # =========================
@@ -500,45 +500,31 @@ class LorentzianClassificationScript(
         #       effect of outliers and take into account the warping of
         #       "price-time" due to proximity to significant economic events.
 
-        # Variables used for ML Logic
-        this_y_train_series = y_train_series[:candle_index]
         last_distance: float = -1
         prediction: float = 0
-        size: int = min(
-            self.trading_mode.general_settings.max_bars_back - 1,
-            len(this_y_train_series) - 1,
-        )
-        size_Loop: int = min(self.trading_mode.general_settings.max_bars_back - 1, size)
-
-        if self.trading_mode.general_settings.use_remote_fractals:
-            start_index = 0
-            end_index = size_Loop - missing_data_length
-        else:
-            start_index = candle_index - size_Loop
-            end_index = candle_index
-
-        for candles_back in range(start_index, end_index):
-            # candles_back_index = candle_index - tradingview_loop_size + candles_back
-            lorentzian_distance: float = self.get_lorentzian_distance(
-                candle_index=candle_index,
+        for candles_back in self._get_candles_back_start_end_index(
+            current_candle_index
+        ):
+            lorentzian_distance: float = classification_utils.get_lorentzian_distance(
+                self.trading_mode.feature_engineering_settings.feature_count,
+                candle_index=current_candle_index,
                 candles_back_index=candles_back,
                 feature_arrays=feature_arrays,
             )
             if lorentzian_distance >= last_distance and (
-                candles_back % 4
-                or not self.trading_mode.general_settings.use_down_sampling
+                not self.trading_mode.general_settings.use_down_sampling
+                or candles_back
+                % self.trading_mode.general_settings.only_train_on_every_x_bars
             ):
                 last_distance = lorentzian_distance
-                predictions.append(round(y_train_series[candles_back]))
+                predictions.append(y_train_series[candles_back])
                 distances.append(lorentzian_distance)
                 if (
                     len(predictions)
                     > self.trading_mode.general_settings.neighbors_count
                 ):
                     last_distance = distances[
-                        round(
-                            self.trading_mode.general_settings.neighbors_count * 3 / 4
-                        )
+                        self.trading_mode.general_settings.last_distance_neighbors_count
                     ]
                     del distances[0]
                     del predictions[0]
@@ -550,7 +536,7 @@ class LorentzianClassificationScript(
         ) = self._set_signals_from_prediction(
             prediction=prediction,
             _filters=_filters,
-            candle_index=candle_index,
+            candle_index=current_candle_index,
             previous_signals=previous_signals,
             start_long_trades=start_long_trades,
             start_short_trades=start_short_trades,
@@ -568,6 +554,27 @@ class LorentzianClassificationScript(
             is_sell_signals=is_sell_signals,
         )
         return bars_since_green_entry, bars_since_red_entry
+
+    def _get_candles_back_start_end_index(self, current_candle_index: int):
+        size_loop: int = min(
+            self.trading_mode.general_settings.max_bars_back - 1,
+            current_candle_index,
+        )
+
+        if self.trading_mode.general_settings.use_remote_fractals:
+            # classify starting from:
+            #   live mode: first bar
+            #   backtesting:  current bar - live_history_size
+            start_index: int = max(
+                current_candle_index
+                - self.trading_mode.general_settings.live_history_size,
+                0,
+            )
+            end_index: int = start_index + size_loop
+        else:
+            start_index: int = current_candle_index - size_loop
+            end_index: int = current_candle_index
+        return range(start_index, end_index)
 
     def _get_ma_filters(self, candle_closes, data_length):
         if self.trading_mode.filter_settings.use_ema_filter:
@@ -797,121 +804,6 @@ class LorentzianClassificationScript(
                 utils.SignalDirection.neutral,
             ),
         )
-
-    def get_lorentzian_distance(
-        self,
-        candle_index: int,
-        candles_back_index: int,
-        feature_arrays: utils.FeatureArrays,
-    ) -> float:
-        # TODO reafctor use list and sum instead
-        if self.trading_mode.feature_engineering_settings.feature_count == 5:
-            return (
-                math.log(
-                    1
-                    + abs(
-                        feature_arrays.f1[candle_index]
-                        - feature_arrays.f1[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f2[candle_index]
-                        - feature_arrays.f2[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f3[candle_index]
-                        - feature_arrays.f3[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f4[candle_index]
-                        - feature_arrays.f4[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f5[candle_index]
-                        - feature_arrays.f5[candles_back_index]
-                    )
-                )
-            )
-        elif self.trading_mode.feature_engineering_settings.feature_count == 4:
-            return (
-                math.log(
-                    1
-                    + abs(
-                        feature_arrays.f1[candle_index]
-                        - feature_arrays.f1[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f2[candle_index]
-                        - feature_arrays.f2[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f3[candle_index]
-                        - feature_arrays.f3[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f4[candle_index]
-                        - feature_arrays.f4[candles_back_index]
-                    )
-                )
-            )
-        elif self.trading_mode.feature_engineering_settings.feature_count == 3:
-            return (
-                math.log(
-                    1
-                    + abs(
-                        feature_arrays.f1[candle_index]
-                        - feature_arrays.f1[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f2[candle_index]
-                        - feature_arrays.f2[candles_back_index]
-                    )
-                )
-                + math.log(
-                    1
-                    + abs(
-                        feature_arrays.f3[candle_index]
-                        - feature_arrays.f3[candles_back_index]
-                    )
-                )
-            )
-        elif self.trading_mode.feature_engineering_settings.feature_count == 2:
-            return math.log(
-                1
-                + abs(
-                    feature_arrays.f1[candle_index]
-                    - feature_arrays.f1[candles_back_index]
-                )
-            ) + math.log(
-                1
-                + abs(
-                    feature_arrays.f2[candle_index]
-                    - feature_arrays.f2[candles_back_index]
-                )
-            )
 
     async def _handle_plottings(
         self,

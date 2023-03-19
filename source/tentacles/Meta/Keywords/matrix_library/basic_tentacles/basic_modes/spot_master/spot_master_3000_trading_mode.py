@@ -1,22 +1,15 @@
 import decimal
 from math import ceil
-import time
 import typing
 
-import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.errors as commons_errors
-
 import octobot_trading.api.portfolio as portfolio
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
-from tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.cancel_expired_orders.expired_orders_cancelling import (
-    cancel_expired_orders_for_this_candle,
-)
-
-import tentacles.Meta.Keywords.scripting_library.orders.cancelling as cancelling
 import tentacles.Meta.Keywords.scripting_library.orders.order_types as order_types
 
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.orders.expired_orders_cancelling as expired_orders_cancelling
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.data.public_exchange_data as public_exchange_data
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_enums as spot_master_enums
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_3000_trading_mode_settings as spot_master_3000_trading_mode_settings
@@ -91,13 +84,14 @@ class SpotMaster3000Making(
                     self.order_type
                     == spot_master_enums.SpotMasterOrderTypes.LIMIT.value
                 ):
-                    if amount := self.round_up_order_amount_if_enabled(
+                    amount = self.round_up_order_amount_if_enabled(
                         available_amount=order_to_execute.available_amount,
                         order_amount=order_to_execute.order_amount_available,
                         order_price=order_to_execute.order_execute_price,
                         symbol=order_to_execute.symbol,
                         order_side=order_to_execute.change_side,
-                    ):
+                    )
+                    if amount:
                         await order_types.limit(
                             self.ctx,
                             side=order_to_execute.change_side,
@@ -108,13 +102,14 @@ class SpotMaster3000Making(
                     self.order_type
                     == spot_master_enums.SpotMasterOrderTypes.MARKET.value
                 ):
-                    if amount := self.round_up_order_amount_if_enabled(
+                    amount = self.round_up_order_amount_if_enabled(
                         available_amount=order_to_execute.available_amount,
                         order_amount=order_to_execute.order_amount_available,
                         order_price=order_to_execute.asset_value,
                         symbol=order_to_execute.symbol,
                         order_side=order_to_execute.change_side,
-                    ):
+                    )
+                    if amount:
                         await order_types.market(
                             self.ctx,
                             side=order_to_execute.change_side,
@@ -124,13 +119,14 @@ class SpotMaster3000Making(
                     self.order_type
                     == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
                 ):
-                    if amount := self.round_up_order_amount_if_enabled(
+                    amount = self.round_up_order_amount_if_enabled(
                         available_amount=order_to_execute.available_amount,
                         order_amount=order_to_execute.order_amount_available,
                         order_price=order_to_execute.asset_value,
                         symbol=order_to_execute.symbol,
                         order_side=order_to_execute.change_side,
-                    ):
+                    )
+                    if amount:
                         await activate_managed_order.managed_order(
                             self,
                             forced_amount=amount,
@@ -167,9 +163,8 @@ class SpotMaster3000Making(
             available_symbols: list = self.get_available_symbols(coin)
             _asset: asset.TargetAsset = None
             if not available_symbols:
-                if not (
-                    _asset := self.calculate_reference_market_asset(settings, coin)
-                ):
+                _asset = self.calculate_reference_market_asset(settings, coin)
+                if not _asset:
                     # should never happen
                     self.ctx.logger.error(f"No trading pair available for {coin}")
                     continue
@@ -185,8 +180,8 @@ class SpotMaster3000Making(
                 self.target_portfolio[coin] = _asset
 
     async def calculate_asset(
-        self, settings, coin, available_symbols
-    ) -> asset.TargetAsset or None:
+        self, settings: dict, coin: str, available_symbols: list
+    ) -> typing.Optional[asset.TargetAsset]:
         """
         it computes the TargetAsset for all available symbols
         and pickes the one with most available percent of portfolio to execute trades on
@@ -201,10 +196,11 @@ class SpotMaster3000Making(
             if this_ref_market != self.ref_market:
                 conversion_symbol = f"{this_ref_market}/{self.ref_market}"
                 conversion_symbol_inverse: list = f"{self.ref_market}/{this_ref_market}"
-                conversion_value: float = None
+                conversion_value: typing.Optional[float] = None
                 available_symbol = None
                 for available_symbol in (conversion_symbol, conversion_symbol_inverse):
-                    if value := await self.get_asset_value(available_symbol):
+                    value = await self.get_asset_value(available_symbol)
+                    if value:
                         conversion_value = value
                         break
                 if not conversion_value:
@@ -224,7 +220,8 @@ class SpotMaster3000Making(
                         str(conversion_value)
                     )
             open_order_size = self.get_open_order_quantity(symbol)
-            if not (asset_value := await self.get_asset_value(symbol)):
+            asset_value = await self.get_asset_value(symbol)
+            if not asset_value:
                 if coin in self.ctx.symbol:
                     self.ctx.logger.debug(
                         f"Not able to determine asset value for {coin} with {symbol} "
@@ -281,8 +278,8 @@ class SpotMaster3000Making(
         return potential_order, _asset
 
     def calculate_reference_market_asset(
-        self, settings, coin
-    ) -> asset.TargetAsset or None:
+        self, settings: dict, coin: str
+    ) -> typing.Optional[asset.TargetAsset]:
         open_order_size: decimal.Decimal = decimal.Decimal("0")  # TODO
         if self.ref_market == coin:
             symbol: str = coin
@@ -309,21 +306,21 @@ class SpotMaster3000Making(
                 open_order_size=open_order_size,
             )
 
-    async def load_orders(self):
+    async def load_orders(self) -> None:
         self.open_orders = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
             # symbol=self.ctx.symbol
         )
 
-    async def cancel_expired_orders(self):
+    async def cancel_expired_orders(self) -> None:
         if self.order_type in (
             spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
             spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value,
         ):
-            await cancel_expired_orders_for_this_candle(
+            await expired_orders_cancelling.cancel_expired_orders_for_this_candle(
                 self.ctx, limit_max_age_in_bars=self.limit_max_age_in_bars
             )
 
-    def get_open_order_quantity(self, symbol: str):
+    def get_open_order_quantity(self, symbol: str) -> decimal.Decimal:
         open_order_size: decimal.Decimal = decimal.Decimal("0")
         if self.open_orders:
             for order in self.open_orders:
@@ -334,7 +331,7 @@ class SpotMaster3000Making(
                         open_order_size -= order.origin_quantity
         return open_order_size
 
-    async def get_asset_value(self, symbol: str) -> bool or float:
+    async def get_asset_value(self, symbol: str) -> typing.Optional[float]:
         try:
             return await public_exchange_data.get_current_candle(
                 self, "close", symbol=symbol
@@ -347,7 +344,6 @@ class SpotMaster3000Making(
                     f"(time: {self.ctx.trigger_cache_timestamp}, "
                     f"{symbol}, {self.ctx.time_frame})"
                 )
-            return False
 
     def get_available_symbols(self, coin: str) -> list:
         return list(
@@ -368,7 +364,8 @@ class SpotMaster3000Making(
                 fixed_min_value,
                 minimum_amount,
             ) = self.get_rounded_min_amount_and_value(symbol, order_price)
-            if (original_order_value := order_amount * order_price) <= fixed_min_value:
+            original_order_value = order_amount * order_price
+            if original_order_value <= fixed_min_value:
                 if not self._check_if_available_funds(
                     available_amount,
                     minimum_amount,
@@ -386,7 +383,9 @@ class SpotMaster3000Making(
             # dont round
         return order_amount
 
-    def get_rounded_min_amount_and_value(self, symbol, order_price):
+    def get_rounded_min_amount_and_value(
+        self, symbol: str, order_price: decimal.Decimal
+    ) -> typing.Tuple[decimal.Decimal, decimal.Decimal, decimal.Decimal]:
         market_status = self.ctx.exchange_manager.exchange.get_market_status(
             symbol, with_fixer=False
         )
@@ -405,13 +404,13 @@ class SpotMaster3000Making(
 
     def _check_if_available_funds(
         self,
-        available_amount,
-        minimum_amount,
-        symbol,
-        order_side,
-        order_price,
-        min_value,
-    ):
+        available_amount: decimal.Decimal,
+        minimum_amount: decimal.Decimal,
+        symbol: str,
+        order_side: str,
+        order_price: decimal.Decimal,
+        min_value: decimal.Decimal,
+    ) -> bool:
         if available_amount < minimum_amount:
             # not enough funds
             self.ctx.logger.warning(
@@ -424,7 +423,12 @@ class SpotMaster3000Making(
         return True
 
     def _round_up_order_amount(
-        self, min_value, original_order_value, symbol, order_side, minimum_amount
+        self,
+        min_value: decimal.Decimal,
+        original_order_value: decimal.Decimal,
+        symbol: str,
+        order_side: str,
+        minimum_amount: decimal.Decimal,
     ) -> decimal.Decimal:
         # round up
         self.ctx.logger.info(
@@ -435,13 +439,16 @@ class SpotMaster3000Making(
         return minimum_amount
 
     def _round_down_order_amount(
-        self, min_value, original_order_value, symbol, order_side
+        self,
+        min_value: decimal.Decimal,
+        original_order_value: decimal.Decimal,
+        symbol: str,
+        order_side: str,
     ) -> bool:
-        if (
-            round_orders_max_value := (
-                decimal.Decimal(str(self.round_orders_max_value / 100)) * min_value
-            )
-        ) > original_order_value:
+        round_orders_max_value = (
+            decimal.Decimal(str(self.round_orders_max_value / 100)) * min_value
+        )
+        if round_orders_max_value > original_order_value:
             # round down
             self.ctx.logger.warning(
                 f"Order less then minimum value to round up ({symbol} | "
@@ -451,9 +458,10 @@ class SpotMaster3000Making(
             return True
         return False
 
-    def get_ref_market_from_symbol(self, symbol) -> str:
+    def get_ref_market_from_symbol(self, symbol: str) -> str:
         return symbol_util.parse_symbol(symbol).quote
 
 
-def float_round(num, places=0, direction=ceil):
+def float_round(num: float, places: int = 0) -> float:
+    direction = ceil
     return direction(num * (10**places)) / float(10**places)

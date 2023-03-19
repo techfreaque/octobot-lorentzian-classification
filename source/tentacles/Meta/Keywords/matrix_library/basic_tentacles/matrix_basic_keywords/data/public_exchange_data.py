@@ -1,3 +1,4 @@
+import typing
 import numpy
 
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.user_inputs2 as user_inputs2
@@ -83,10 +84,10 @@ async def get_candles_(maker, source_name="close", time_frame=None, symbol=None)
 
 async def get_candle_from_time(
     maker,
-    timestamp: int or float,
-    source_name="close",
-    time_frame: str = None,
-    symbol: str = None,
+    timestamp: typing.Union[int, float],
+    source_name: str = "close",
+    time_frame: typing.Optional[str] = None,
+    symbol: typing.Optional[str] = None,
 ):
     times = await get_candles_(
         maker, source_name="time", time_frame=time_frame, symbol=symbol

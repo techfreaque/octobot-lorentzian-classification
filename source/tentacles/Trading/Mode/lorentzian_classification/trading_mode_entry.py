@@ -1,6 +1,8 @@
 import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.scripted_trading_mode.use_scripted_trading_mode as use_scripted_trading_mode
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 
 import tentacles.Trading.Mode.lorentzian_classification.classification as classification
@@ -14,18 +16,10 @@ class LorentzianClassificationMode(settings.LorentzianClassificationModeInputs):
         super().__init__(config, exchange_manager)
         self.producer = LorentzianClassificationProducer
         if exchange_manager:
-            try:
-                import backtesting_script
-
-                self.register_script_module(backtesting_script, live=False)
-            except (AttributeError, ModuleNotFoundError):
-                pass
-            try:
-                import profile_trading_script
-
-                self.register_script_module(profile_trading_script)
-            except (AttributeError, ModuleNotFoundError):
-                pass
+            # allow scripted trading if a
+            #   profile_trading_script.py is in the current profile
+            if use_scripted_trading_mode.initialize_scripted_trading_mode(self):
+                self.get_script = abstract_mode_base.AbstractBaseMode.get_script
         else:
             logging.get_logger(self.get_name()).error(
                 "At least one exchange must be enabled "

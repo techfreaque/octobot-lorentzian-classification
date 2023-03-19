@@ -55,7 +55,7 @@ class TimeFrameStrategyEvaluator(evaluators.StrategyEvaluator):
         # self.specific_config["backtesting_required_candles_count"] = 200
 
     def get_full_cycle_evaluator_types(self) -> tuple:
-        return []
+        return tuple()
 
     async def matrix_callback(
         self,

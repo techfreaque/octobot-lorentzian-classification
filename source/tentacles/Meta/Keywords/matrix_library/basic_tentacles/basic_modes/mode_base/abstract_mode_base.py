@@ -21,6 +21,8 @@ PING_PONG_STORAGE_LOADING_TIMEOUT = 1000
 
 
 class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMode):
+    get_script = property(doc='(!) Disallowed inherited')
+
     ENABLE_PRO_FEATURES = True
     AVAILABLE_API_ACTIONS = [matrix_enums.TradingModeCommands.EXECUTE]
 
@@ -119,7 +121,7 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                 # todo cancel and restart live tasks
                 await self.start_over_database()
 
-    async def start_over_database(self, action: str or dict = None):
+    async def start_over_database(self):
         await clear_plotting_cache(self)
         symbol_db = databases.RunDatabasesProvider.instance().get_symbol_db(
             self.bot_id, self.exchange_manager.exchange_name, self.symbol
@@ -255,18 +257,19 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
     ):
         try:
             import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
+
+            await simple_ping_pong.play_ping_pong(
+                self,
+                exchange,
+                exchange_id,
+                cryptocurrency,
+                symbol,
+                order,
+                is_new,
+                is_from_bot,
+            )
         except (ImportError, ModuleNotFoundError):
-            simple_ping_pong = None
-        await simple_ping_pong.play_ping_pong(
-            self,
-            exchange,
-            exchange_id,
-            cryptocurrency,
-            symbol,
-            order,
-            is_new,
-            is_from_bot,
-        )
+            pass
 
     def set_initialized_trading_pair_by_bot_id(self, symbol, time_frame, initialized):
         # todo migrate to event tree
