@@ -30,7 +30,7 @@ class AbstractBaseModeProducer(
         cryptocurrency: str,
         symbol: str,
         time_frame: str,
-        candle: dict,
+        candle: list,
         init_call: bool = False,
     ):
         async with self.trading_mode_trigger(), self.trading_mode.remote_signal_publisher(

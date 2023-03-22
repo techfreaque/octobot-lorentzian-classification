@@ -104,7 +104,6 @@
 #     as the number of nearest neighbors used for comparison increases.
 
 
-import math
 import typing
 import numpy
 import numpy.typing as npt
@@ -163,10 +162,21 @@ class LorentzianClassificationScript(
         self,
         ctx: context_management.Context,
     ):
+        this_symbol_settings: utils.SymbolSettings = (
+            self.trading_mode.data_source_settings.symbol_settings_by_symbols[
+                self.trading_mode.symbol
+            ]
+        )
+        if not this_symbol_settings.trade_on_this_pair:
+            return
+
         if await self._trade_cached_backtesting_candles_if_available(ctx):
             return
-        s_time = basic_utilities.start_measure_time(" Lorentzian Classification -")
+        s_time = basic_utilities.start_measure_time(
+            f" Lorentzian Classification {self.trading_mode.symbol} -"
+        )
         await self.init_order_settings(ctx)
+        data_source_symbol: str = this_symbol_settings.get_data_source_symbol_name()
         (
             candle_closes,
             candle_highs,
@@ -177,9 +187,10 @@ class LorentzianClassificationScript(
             candle_times,
         ) = await self._get_candle_data(
             ctx,
-            candle_source_name=self.trading_mode.general_settings.source,
+            candle_source_name=self.trading_mode.data_source_settings.source,
+            data_source_symbol=data_source_symbol,
         )
-        data_length = len(candle_highs)
+        data_length: int = len(candle_highs)
         _filters: utils.Filter = self._get_all_filters(
             candle_closes,
             data_length,
@@ -203,7 +214,9 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-        ) = self.get_kernel_data(user_selected_candles, data_length)
+        ) = kernel.get_kernel_data(
+            self.trading_mode.kernel_settings, user_selected_candles, data_length
+        )
 
         feature_arrays: utils.FeatureArrays = self._get_feature_arrays(
             candle_closes=candle_closes,
@@ -211,9 +224,9 @@ class LorentzianClassificationScript(
             candle_lows=candle_lows,
             candles_hlc3=candles_hlc3,
         )
-        y_train_series: npt.NDArray[numpy.bool_] = self._get_y_train_series(
-            user_selected_candles
-        )
+        y_train_series: npt.NDArray[
+            numpy.bool_
+        ] = classification_utils.get_y_train_series(user_selected_candles)
 
         # cut all historical data to same length
         # for numpy and loop indizies being aligned
@@ -247,7 +260,6 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-
         ) = basic_utilities.cut_data_to_same_len(
             (
                 y_train_series,
@@ -290,7 +302,7 @@ class LorentzianClassificationScript(
         # =================================
 
         # This model specializes specifically in predicting the direction of price
-        # action over the course of the next general_settings.only_train_on_every_x_bars.
+        # action over the course of the next classification_settings.only_train_on_every_x_bars.
 
         previous_signals: list = [utils.SignalDirection.neutral]
         historical_predictions: list = []
@@ -308,10 +320,10 @@ class LorentzianClassificationScript(
 
         basic_utilities.end_measure_time(
             s_time,
-            " Lorentzian Classification - calculating full history indicators",
+            f" Lorentzian Classification {self.trading_mode.symbol} - calculating full history indicators",
         )
         s_time = basic_utilities.start_measure_time(
-            " Lorentzian Classification - classifying candles"
+            f" Lorentzian Classification {self.trading_mode.symbol} - classifying candles"
         )
         for candle_index in range(max_bars_back_index, cutted_data_length):
             (
@@ -362,6 +374,7 @@ class LorentzianClassificationScript(
         s_time = basic_utilities.start_measure_time()
         await self._handle_plottings(
             ctx=ctx,
+            this_symbol_settings=this_symbol_settings,
             y_train_series=y_train_series,
             _filters=_filters,
             candle_closes=candle_closes,
@@ -396,7 +409,7 @@ class LorentzianClassificationScript(
         )
         basic_utilities.end_measure_time(
             s_time,
-            " Lorentzian Classification - storing plots",
+            f" Lorentzian Classification {self.trading_mode.symbol} - storing plots",
         )
 
     def _classify_current_candle(
@@ -496,10 +509,9 @@ class LorentzianClassificationScript(
         for candles_back in self._get_candles_back_start_end_index(
             current_candle_index
         ):
-            if (
-                candles_back
-                % self.trading_mode.general_settings.only_train_on_every_x_bars
-                or not self.trading_mode.general_settings.use_down_sampling
+            if self.trading_mode.classification_settings.down_sampler(
+                candles_back,
+                self.trading_mode.classification_settings.only_train_on_every_x_bars,
             ):
                 lorentzian_distance: float = (
                     classification_utils.get_lorentzian_distance(
@@ -515,19 +527,19 @@ class LorentzianClassificationScript(
                     distances.append(lorentzian_distance)
                     if (
                         len(predictions)
-                        > self.trading_mode.general_settings.neighbors_count
+                        > self.trading_mode.classification_settings.neighbors_count
                     ):
                         last_distance = distances[
-                            self.trading_mode.general_settings.last_distance_neighbors_count
+                            self.trading_mode.classification_settings.last_distance_neighbors_count
                         ]
                         del distances[0]
                         del predictions[0]
-        prediction = sum(predictions)
+        prediction: int = sum(predictions)
         historical_predictions.append(prediction)
         (
             bars_since_green_entry,
             bars_since_red_entry,
-        ) = self._set_signals_from_prediction(
+        ) = classification_utils.set_signals_from_prediction(
             prediction=prediction,
             _filters=_filters,
             candle_index=current_candle_index,
@@ -546,22 +558,22 @@ class LorentzianClassificationScript(
             bars_since_red_entry=bars_since_red_entry,
             is_buy_signals=is_buy_signals,
             is_sell_signals=is_sell_signals,
+            exit_type=self.trading_mode.order_settings.exit_type,
         )
         return bars_since_green_entry, bars_since_red_entry
 
     def _get_candles_back_start_end_index(self, current_candle_index: int):
         size_loop: int = min(
-            self.trading_mode.general_settings.max_bars_back - 1,
+            self.trading_mode.classification_settings.max_bars_back - 1,
             current_candle_index,
         )
-
-        if self.trading_mode.general_settings.use_remote_fractals:
+        if self.trading_mode.classification_settings.use_remote_fractals:
             # classify starting from:
             #   live mode: first bar
             #   backtesting:  current bar - live_history_size
             start_index: int = max(
                 current_candle_index
-                - self.trading_mode.general_settings.live_history_size,
+                - self.trading_mode.classification_settings.live_history_size,
                 0,
             )
             end_index: int = start_index + size_loop
@@ -608,299 +620,106 @@ class LorentzianClassificationScript(
             is_sma_downtrend: npt.NDArray[numpy.bool_] = is_sma_uptrend
         return is_ema_uptrend, is_ema_downtrend, is_sma_uptrend, is_sma_downtrend
 
-    def _set_signals_from_prediction(
-        self,
-        prediction,
-        _filters: utils.Filter,
-        candle_index: int,
-        previous_signals: list,
-        start_long_trades: list,
-        start_short_trades: list,
-        is_bullishs: npt.NDArray[numpy.bool_],
-        is_bearishs: npt.NDArray[numpy.bool_],
-        # alerts_bullish: npt.NDArray[numpy.bool_],
-        # alerts_bearish: npt.NDArray[numpy.bool_],
-        # is_bearish_changes: npt.NDArray[numpy.bool_],
-        # is_bullish_changes: npt.NDArray[numpy.bool_],
-        exit_short_trades: list,
-        exit_long_trades: list,
-        bars_since_green_entry: int,
-        bars_since_red_entry: int,
-        is_buy_signals,
-        is_sell_signals,
-    ):
-        # ============================
-        # ==== Prediction Filters ====
-        # ============================
-
-        # Filtered Signal: The model's prediction of future price movement direction with user-defined filters applied
-        signal = (
-            utils.SignalDirection.long
-            if prediction > 0 and _filters.filter_all[candle_index]
-            else (
-                utils.SignalDirection.short
-                if prediction < 0 and _filters.filter_all[candle_index]
-                else previous_signals[-1]
-            )
-        )
-        is_different_signal_type: bool = previous_signals[-1] != signal
-        previous_signals.append(signal)
-
-        # Fractal Filters: Derived from relative appearances of signals in a given time series fractal/segment with a default length of 4 bars
-        # is_early_signal_flip = previous_signals[-1] and (
-        #     previous_signals[-2] or previous_signals[-3] or previous_signals[-4]
-        # )
-        is_buy_signal = (
-            signal == utils.SignalDirection.long and _filters.is_uptrend[candle_index]
-        )
-        is_buy_signals.append(is_buy_signal)
-        is_sell_signal = (
-            signal == utils.SignalDirection.short
-            and _filters.is_downtrend[candle_index]
-        )
-        is_sell_signals.append(is_sell_signal)
-
-        is_new_buy_signal = is_buy_signal and is_different_signal_type
-        is_new_sell_signal = is_sell_signal and is_different_signal_type
-
-        # ===========================
-        # ==== Entries and Exits ====
-        # ===========================
-
-        # Entry Conditions: Booleans for ML Model Position Entries
-        start_long_trade = (
-            is_new_buy_signal
-            and is_bullishs[candle_index]
-            and _filters.is_uptrend[candle_index]
-        )
-        start_long_trades.append(start_long_trade)
-        start_short_trade = (
-            is_new_sell_signal
-            and is_bearishs[candle_index]
-            and _filters.is_downtrend[candle_index]
-        )
-        start_short_trades.append(start_short_trade)
-
-        # exits
-
-        # utils.ExitTypes.SWITCH_SIDES doesnt need exits
-
-        if self.trading_mode.order_settings.exit_type == utils.ExitTypes.FOUR_BARS:
-            # Bar-Count Filters: Represents strict filters based on a pre-defined holding period of 4 bars
-            bars_since_green_entry, bars_since_red_entry = self._handle_four_bar_exit(
-                bars_since_green_entry,
-                bars_since_red_entry,
-                exit_short_trades,
-                exit_long_trades,
-                start_long_trade,
-                start_short_trade,
-            )
-        # elif self.trading_mode.order_settings.exit_type == utils.ExitTypes.DYNAMIC:
-        # TODO
-        #     pass
-
-        #     if alerts_bullish[candle_index]:
-        #         bars_since_red_exit = 0
-        #     else:
-        #         bars_since_red_exit += 1
-        #     if alerts_bearish[candle_index]:
-        #         bars_since_green_exit = 0
-        #     else:
-        #         bars_since_green_exit += 1
-
-        #     # Dynamic Exit Conditions: Booleans for ML Model Position Exits based on Fractal Filters and Kernel Regression Filters
-        #     last_signal_was_bullish = bars_since_green_entry < bars_since_red_entry
-        #     last_signal_was_bearish = bars_since_red_entry < bars_since_green_entry
-        #     is_valid_short_exit = bars_since_green_exit > bars_since_red_entry
-        #     is_valid_long_exit = bars_since_green_exit > bars_since_green_entry
-        #     end_long_trade_dynamic = (
-        #         is_bearish_changes[candle_index] and previous_is_valid_long_exit
-        #     )
-        #     end_short_trade_dynamic = (
-        #         is_bullish_changes[candle_index] and previous_is_valid_short_exit
-        #     )
-        #     previous_is_valid_short_exit = is_valid_short_exit
-        #     previous_is_valid_long_exit = is_valid_long_exit
-
-        #     # # Fixed Exit Conditions: Booleans for ML Model Position Exits based on a Bar-Count Filters
-        #     # end_long_trade_strict = (
-        #     #     (is_held_four_bars and is_last_signal_buy)
-        #     #     or (
-        #     #         is_held_less_than_four_bars
-        #     #         and is_new_sell_signal
-        #     #         and is_last_signal_buy
-        #     #     )
-        #     # ) and start_long_trades[-5]
-        #     # end_short_trade_strict = (
-        #     #     (is_held_four_bars and is_last_signal_sell)
-        #     #     or (
-        #     #         is_held_less_than_four_bars
-        #     #         and is_new_buy_signal
-        #     #         and is_last_signal_sell
-        #     #     )
-        #     # ) and start_short_trades[-5]
-        #     # is_dynamic_exit_valid = (
-        #     #     not self.trading_mode.filter_settings.use_ema_filter
-        #     #     and not self.trading_mode.filter_settings.use_sma_filter
-        #     #     and not self.trading_mode.kernel_settings.use_kernel_smoothing
-        #     # )
-        #     # end_long_trade = self.trading_mode.general_settings.use_dynamic_exits and (
-        #     #     end_long_trade_dynamic
-        #     #     if is_dynamic_exit_valid
-        #     #     else end_long_trade_strict
-        #     # )
-        #     # end_short_trade = self.trading_mode.general_settings.use_dynamic_exits and (
-        #     #     end_short_trade_dynamic
-        #     #     if is_dynamic_exit_valid
-        #     #     else end_short_trade_strict
-        #     # )
-        return bars_since_green_entry, bars_since_red_entry
-
-    def _handle_four_bar_exit(
-        self,
-        bars_since_green_entry: int,
-        bars_since_red_entry: int,
-        exit_short_trades: list,
-        exit_long_trades: list,
-        start_long_trade: bool,
-        start_short_trade: bool,
-    ):
-        # TODO to compute in one go:
-        #   use shifted start_long_trade / start_short_trade arrays for exits
-        #   + use numpy.where for other side signals for bars_since <4
-        if start_long_trade:
-            bars_since_green_entry = 0
-        else:
-            bars_since_green_entry += 1
-        if start_short_trade:
-            bars_since_red_entry = 0
-        else:
-            bars_since_red_entry += 1
-
-        if bars_since_red_entry == 4:
-            exit_short_trades.append(True)
-            exit_long_trades.append(False)
-        elif bars_since_green_entry == 4:
-            exit_long_trades.append(True)
-            exit_short_trades.append(False)
-        else:
-            if bars_since_red_entry < 4 and start_long_trade:
-                exit_short_trades.append(True)
-            else:
-                exit_short_trades.append(False)
-            if bars_since_green_entry < 4 and start_short_trade:
-                exit_long_trades.append(True)
-            else:
-                exit_long_trades.append(False)
-        return bars_since_green_entry, bars_since_red_entry
-
-    def _get_y_train_series(self, user_selected_candles):
-        cutted_candles, shifted_candles = utils.shift_data(user_selected_candles, 4)
-        return numpy.where(
-            shifted_candles < cutted_candles,
-            utils.SignalDirection.short,
-            numpy.where(
-                shifted_candles > cutted_candles,
-                utils.SignalDirection.long,
-                utils.SignalDirection.neutral,
-            ),
-        )
-
     async def _handle_plottings(
         self,
-        ctx,
-        y_train_series,
-        _filters,
-        candle_closes,
-        candle_highs,
-        candle_lows,
-        candle_times,
-        candles_hlc3,
-        candles_ohlc4,
-        feature_arrays,
-        alerts_bullish,
-        alerts_bearish,
-        is_bullishs,
-        is_bearishs,
-        is_bearish_changes,
-        is_bullish_changes,
-        is_bullish_cross_alerts,
-        is_bearish_cross_alerts,
-        kernel_estimate,
-        yhat2,
-        is_bearish_rates,
-        was_bullish_rates,
-        is_bullish_rates,
-        was_bearish_rates,
-        historical_predictions,
-        start_long_trades,
-        start_short_trades,
-        exit_short_trades,
-        exit_long_trades,
-        previous_signals,
-        is_buy_signals,
-        is_sell_signals,
-    ):
-        slightly_below_lows = candle_lows * 0.999
-        slightly_above_highs = candle_highs * 1.001
+        ctx: context_management.Context,
+        this_symbol_settings: utils.SymbolSettings,
+        y_train_series: npt.NDArray[numpy.int64],
+        _filters: utils.Filter,
+        candle_closes: npt.NDArray[numpy.float64],
+        candle_highs: npt.NDArray[numpy.float64],
+        candle_lows: npt.NDArray[numpy.float64],
+        candle_times: npt.NDArray[numpy.float64],
+        candles_hlc3: npt.NDArray[numpy.float64],
+        candles_ohlc4: npt.NDArray[numpy.float64],
+        feature_arrays: utils.FeatureArrays,
+        alerts_bullish: npt.NDArray[numpy.bool_],
+        alerts_bearish: npt.NDArray[numpy.bool_],
+        is_bullishs: npt.NDArray[numpy.bool_],
+        is_bearishs: npt.NDArray[numpy.bool_],
+        is_bearish_changes: npt.NDArray[numpy.bool_],
+        is_bullish_changes: npt.NDArray[numpy.bool_],
+        is_bullish_cross_alerts: npt.NDArray[numpy.bool_],
+        is_bearish_cross_alerts: npt.NDArray[numpy.bool_],
+        kernel_estimate: npt.NDArray[numpy.float64],
+        yhat2: npt.NDArray[numpy.float64],
+        is_bearish_rates: npt.NDArray[numpy.bool_],
+        was_bullish_rates: npt.NDArray[numpy.bool_],
+        is_bullish_rates: npt.NDArray[numpy.bool_],
+        was_bearish_rates: npt.NDArray[numpy.bool_],
+        historical_predictions: list,
+        start_long_trades: list,
+        start_short_trades: list,
+        exit_short_trades: list,
+        exit_long_trades: list,
+        previous_signals: list,
+        is_buy_signals: list,
+        is_sell_signals: list,
+    ) -> None:
+        slightly_below_lows: npt.NDArray[numpy.float64] = candle_lows * 0.999
+        slightly_above_highs: npt.NDArray[numpy.float64] = candle_highs * 1.001
+        use_own_y_axis: bool = this_symbol_settings.use_custom_pair
         await self._handle_full_history_plottings(
-            ctx,
-            y_train_series,
-            _filters,
-            candle_closes,
-            candle_highs,
-            candle_lows,
-            candle_times,
-            candles_hlc3,
-            candles_ohlc4,
-            feature_arrays,
-            alerts_bullish,
-            alerts_bearish,
-            is_bullishs,
-            is_bearishs,
-            is_bearish_changes,
-            is_bullish_changes,
-            is_bullish_cross_alerts,
-            is_bearish_cross_alerts,
-            kernel_estimate,
-            yhat2,
-            is_bearish_rates,
-            was_bullish_rates,
-            is_bullish_rates,
-            was_bearish_rates,
-            slightly_below_lows,
-            slightly_above_highs,
+            ctx=ctx,
+            this_symbol_settings=this_symbol_settings,
+            y_train_series=y_train_series,
+            _filters=_filters,
+            candle_closes=candle_closes,
+            candle_highs=candle_highs,
+            candle_lows=candle_lows,
+            candle_times=candle_times,
+            candles_hlc3=candles_hlc3,
+            candles_ohlc4=candles_ohlc4,
+            feature_arrays=feature_arrays,
+            alerts_bullish=alerts_bullish,
+            alerts_bearish=alerts_bearish,
+            is_bullishs=is_bullishs,
+            is_bearishs=is_bearishs,
+            is_bearish_changes=is_bearish_changes,
+            is_bullish_changes=is_bullish_changes,
+            is_bullish_cross_alerts=is_bullish_cross_alerts,
+            is_bearish_cross_alerts=is_bearish_cross_alerts,
+            kernel_estimate=kernel_estimate,
+            yhat2=yhat2,
+            is_bearish_rates=is_bearish_rates,
+            was_bullish_rates=was_bullish_rates,
+            is_bullish_rates=is_bullish_rates,
+            was_bearish_rates=was_bearish_rates,
+            slightly_below_lows=slightly_below_lows,
+            slightly_above_highs=slightly_above_highs,
         )
         await self._handle_short_history_plottings(
-            ctx,
-            historical_predictions,
-            candle_times,
-            start_long_trades,
-            start_short_trades,
-            exit_short_trades,
-            exit_long_trades,
-            slightly_below_lows,
-            slightly_above_highs,
-            previous_signals,
-            is_buy_signals,
-            is_sell_signals,
+            ctx=ctx,
+            use_own_y_axis=this_symbol_settings.use_custom_pair,
+            historical_predictions=historical_predictions,
+            candle_times=candle_times,
+            start_long_trades=start_long_trades,
+            start_short_trades=start_short_trades,
+            exit_short_trades=exit_short_trades,
+            exit_long_trades=exit_long_trades,
+            slightly_below_lows=slightly_below_lows,
+            slightly_above_highs=slightly_above_highs,
+            previous_signals=previous_signals,
+            is_buy_signals=is_buy_signals,
+            is_sell_signals=is_sell_signals,
         )
 
     async def _handle_short_history_plottings(
         self,
         ctx: context_management.Context,
-        historical_predictions,
-        candle_times,
-        start_long_trades,
-        start_short_trades,
-        exit_short_trades,
-        exit_long_trades,
-        slightly_below_lows,
-        slightly_above_highs,
-        previous_signals,
-        is_buy_signals,
-        is_sell_signals,
-    ):
+        use_own_y_axis: bool,
+        historical_predictions: list,
+        candle_times: npt.NDArray[numpy.float64],
+        start_long_trades: list,
+        start_short_trades: list,
+        exit_short_trades: list,
+        exit_long_trades: list,
+        slightly_below_lows: npt.NDArray[numpy.float64],
+        slightly_above_highs: npt.NDArray[numpy.float64],
+        previous_signals: list,
+        is_buy_signals: list,
+        is_sell_signals: list,
+    ) -> None:
         (
             historical_predictions,
             candle_times,
@@ -1024,32 +843,33 @@ class LorentzianClassificationScript(
     async def _handle_full_history_plottings(
         self,
         ctx: context_management.Context,
-        y_train_series,
-        _filters,
-        candle_closes,
-        candle_highs,
-        candle_lows,
-        candle_times,
-        candles_hlc3,
-        candles_ohlc4,
-        feature_arrays,
-        alerts_bullish,
-        alerts_bearish,
-        is_bullishs,
-        is_bearishs,
-        is_bearish_changes,
-        is_bullish_changes,
-        is_bullish_cross_alerts,
-        is_bearish_cross_alerts,
-        kernel_estimate,
-        yhat2,
-        is_bearish_rates,
-        was_bullish_rates,
-        is_bullish_rates,
-        was_bearish_rates,
-        slightly_below_lows,
-        slightly_above_highs,
-    ):
+        this_symbol_settings: utils.SymbolSettings,
+        y_train_series: npt.NDArray[numpy.int64],
+        _filters: utils.Filter,
+        candle_closes: npt.NDArray[numpy.float64],
+        candle_highs: npt.NDArray[numpy.float64],
+        candle_lows: npt.NDArray[numpy.float64],
+        candle_times: npt.NDArray[numpy.float64],
+        candles_hlc3: npt.NDArray[numpy.float64],
+        candles_ohlc4: npt.NDArray[numpy.float64],
+        feature_arrays: utils.FeatureArrays,
+        alerts_bullish: npt.NDArray[numpy.bool_],
+        alerts_bearish: npt.NDArray[numpy.bool_],
+        is_bullishs: npt.NDArray[numpy.bool_],
+        is_bearishs: npt.NDArray[numpy.bool_],
+        is_bearish_changes: npt.NDArray[numpy.bool_],
+        is_bullish_changes: npt.NDArray[numpy.bool_],
+        is_bullish_cross_alerts: npt.NDArray[numpy.bool_],
+        is_bearish_cross_alerts: npt.NDArray[numpy.bool_],
+        kernel_estimate: npt.NDArray[numpy.float64],
+        yhat2: npt.NDArray[numpy.float64],
+        is_bearish_rates: npt.NDArray[numpy.bool_],
+        was_bullish_rates: npt.NDArray[numpy.bool_],
+        is_bullish_rates: npt.NDArray[numpy.bool_],
+        was_bearish_rates: npt.NDArray[numpy.bool_],
+        slightly_below_lows: npt.NDArray[numpy.float64],
+        slightly_above_highs: npt.NDArray[numpy.float64],
+    ) -> None:
         (
             y_train_series,
             _filters.filter_all,
@@ -1083,7 +903,6 @@ class LorentzianClassificationScript(
             was_bullish_rates,
             is_bullish_rates,
             was_bearish_rates,
-
             slightly_below_lows,
             slightly_above_highs,
         ) = basic_utilities.cut_data_to_same_len(
@@ -1124,6 +943,8 @@ class LorentzianClassificationScript(
                 slightly_above_highs,
             )
         )
+        # TODO handle when custom pair
+        use_own_y_axis:bool = this_symbol_settings.use_custom_pair
         if self.trading_mode.filter_settings.plot_volatility_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
@@ -1223,6 +1044,15 @@ class LorentzianClassificationScript(
                 value_key="downtrend",
             )
         additional_values_by_key = {}
+        if this_symbol_settings.use_custom_pair:
+            additional_values_by_key["clo"] = candle_closes
+            await plotting.plot(
+                ctx,
+                title="Candle CLoses " + this_symbol_settings.this_target_symbol,
+                cache_value="clo",
+                chart="main-chart",
+            )
+
         if self.trading_mode.feature_engineering_settings.plot_features:
             additional_values_by_key["f1"] = feature_arrays.f1
             additional_values_by_key["f2"] = feature_arrays.f2
@@ -1500,121 +1330,28 @@ class LorentzianClassificationScript(
             ),
         )
 
-    def get_kernel_data(self, user_selected_candles, data_length: int) -> tuple:
-        # TODO colors
-        # c_green = color.new(#009988, 20)
-        # c_red = color.new(#CC3311, 20)
-        # transparent = color.new(#000000, 100)
-
-        yhat1: npt.NDArray[numpy.float64] = kernel.rationalQuadratic(
-            user_selected_candles,
-            self.trading_mode.kernel_settings.lookback_window,
-            self.trading_mode.kernel_settings.relative_weighting,
-            self.trading_mode.kernel_settings.regression_level,
-        )
-        yhat2: npt.NDArray[numpy.float64] = kernel.gaussian(
-            user_selected_candles,
-            self.trading_mode.kernel_settings.lookback_window
-            - self.trading_mode.kernel_settings.lag,
-            self.trading_mode.kernel_settings.regression_level,
-        )
-        yhat1, yhat2 = basic_utilities.cut_data_to_same_len((yhat1, yhat2))
-
-        kernel_estimate: npt.NDArray[numpy.float64] = yhat1
-        # Kernel Rates of Change
-        # shift and cut data for numpy
-        yhat1_cutted_1, yhat1_shifted_1 = utils.shift_data(yhat1, 1)
-        yhat1_cutted_2, yhat1_shifted_2 = utils.shift_data(yhat1, 2)
-        was_bearish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_2 > yhat1_cutted_2
-        was_bullish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_2 < yhat1_cutted_2
-
-        is_bearish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_1 > yhat1_cutted_1
-        is_bullish_rates: npt.NDArray[numpy.bool_] = yhat1_shifted_1 < yhat1_cutted_1
-
-        is_bearish_rates, was_bullish_rates = basic_utilities.cut_data_to_same_len(
-            (is_bearish_rates, was_bullish_rates)
-        )
-        is_bearish_changes: npt.NDArray[numpy.bool_] = numpy.logical_and(
-            is_bearish_rates, was_bullish_rates
-        )
-        is_bullish_rates, was_bearish_rates = basic_utilities.cut_data_to_same_len(
-            (is_bullish_rates, was_bearish_rates)
-        )
-        is_bullish_changes: npt.NDArray[numpy.bool_] = numpy.logical_and(
-            is_bullish_rates, was_bearish_rates
-        )
-        # Kernel Crossovers
-        is_bullish_cross_alerts, is_bearish_cross_alerts = utils.get_is_crossing_data(
-            yhat2, yhat1
-        )
-        is_bullish_smooths: npt.NDArray[numpy.bool_] = yhat2 >= yhat1
-        is_bearish_smooths: npt.NDArray[numpy.bool_] = yhat2 <= yhat1
-
-        # # Kernel Colors
-        # TODO
-        # # color colorByCross = isBullishSmooth ? c_green : c_red
-        # # color colorByRate = isBullishRate ? c_green : c_red
-        # # color plotColor = showKernelEstimate ? (useKernelSmoothing ? colorByCross : colorByRate) : transparent
-        # # plot(kernelEstimate, color=plotColor, linewidth=2, title="Kernel Regression Estimate")
-
-        # # Alert Variables
-        alerts_bullish: npt.NDArray[numpy.bool_] = (
-            is_bullish_cross_alerts
-            if self.trading_mode.kernel_settings.use_kernel_smoothing
-            else is_bullish_changes
-        )
-        alerts_bearish: npt.NDArray[numpy.bool_] = (
-            is_bearish_cross_alerts
-            if self.trading_mode.kernel_settings.use_kernel_smoothing
-            else is_bearish_changes
-        )
-        # Bullish and Bearish Filters based on Kernel
-        is_bullishs: npt.NDArray[numpy.bool_] = (
-            (
-                is_bullish_smooths
-                if self.trading_mode.kernel_settings.use_kernel_smoothing
-                else is_bullish_rates
-            )
-            if self.trading_mode.kernel_settings.use_kernel_filter
-            else [True] * data_length
-        )
-        is_bearishs: npt.NDArray[numpy.bool_] = (
-            (
-                is_bearish_smooths
-                if self.trading_mode.kernel_settings.use_kernel_smoothing
-                else is_bearish_rates
-            )
-            if self.trading_mode.kernel_settings.use_kernel_filter
-            else [True] * data_length
-        )
-        return (
-            alerts_bullish,
-            alerts_bearish,
-            is_bullishs,
-            is_bearishs,
-            is_bearish_changes,
-            is_bullish_changes,
-            is_bullish_cross_alerts,
-            is_bearish_cross_alerts,
-            kernel_estimate,
-            yhat2,
-            is_bearish_rates,
-            was_bullish_rates,
-            is_bullish_rates,
-            was_bearish_rates,
-        )
-
     async def _get_candle_data(
         self,
         ctx: context_management.Context,
-        candle_source_name,
-    ):
+        candle_source_name: str,
+        data_source_symbol: str,
+    ) -> tuple:
         max_history = True if ctx.exchange_manager.is_backtesting else False
-        candle_times = await exchange_public_data.Time(ctx, max_history=max_history)
-        candle_opens = await exchange_public_data.Open(ctx, max_history=max_history)
-        candle_closes = await exchange_public_data.Close(ctx, max_history=max_history)
-        candle_highs = await exchange_public_data.High(ctx, max_history=max_history)
-        candle_lows = await exchange_public_data.Low(ctx, max_history=max_history)
+        candle_times = await exchange_public_data.Time(
+            ctx, symbol=data_source_symbol, max_history=max_history
+        )
+        candle_opens = await exchange_public_data.Open(
+            ctx, symbol=data_source_symbol, max_history=max_history
+        )
+        candle_closes = await exchange_public_data.Close(
+            ctx, symbol=data_source_symbol, max_history=max_history
+        )
+        candle_highs = await exchange_public_data.High(
+            ctx, symbol=data_source_symbol, max_history=max_history
+        )
+        candle_lows = await exchange_public_data.Low(
+            ctx, symbol=data_source_symbol, max_history=max_history
+        )
         candles_hlc3 = CandlesUtil.HLC3(
             candle_highs,
             candle_lows,
@@ -1631,7 +1368,7 @@ class LorentzianClassificationScript(
             user_selected_candles = candle_closes
         if candle_source_name == enums.PriceStrings.STR_PRICE_OPEN.value:
             user_selected_candles = await exchange_public_data.Open(
-                ctx, max_history=max_history
+                ctx, symbol=data_source_symbol, max_history=max_history
             )
         if candle_source_name == enums.PriceStrings.STR_PRICE_HIGH.value:
             user_selected_candles = candle_highs
@@ -1651,11 +1388,17 @@ class LorentzianClassificationScript(
             candle_times,
         )
 
-    def _get_max_bars_back_index(self, cutted_data_length) -> int:
-        if cutted_data_length >= self.trading_mode.general_settings.max_bars_back:
+    def _get_max_bars_back_index(self, cutted_data_length: int) -> int:
+        if (
+            cutted_data_length
+            >= self.trading_mode.classification_settings.max_bars_back
+        ):
             if self.ctx.exchange_manager.is_backtesting:
-                return self.trading_mode.general_settings.max_bars_back
-            return cutted_data_length - self.trading_mode.general_settings.max_bars_back
+                return self.trading_mode.classification_settings.max_bars_back
+            return (
+                cutted_data_length
+                - self.trading_mode.classification_settings.max_bars_back
+            )
         else:
             self.logger.warning(
                 "Not enough historical bars for the current max_bars_back. "
@@ -1667,15 +1410,15 @@ class LorentzianClassificationScript(
 
     async def _trade_live_candle(
         self,
-        s_time,
-        start_short_trades,
-        start_long_trades,
-        exit_short_trades,
-        exit_long_trades,
-    ):
+        s_time: float,
+        start_short_trades: typing.List[bool],
+        start_long_trades: typing.List[bool],
+        exit_short_trades: typing.List[bool],
+        exit_long_trades: typing.List[bool],
+    ) -> None:
         basic_utilities.end_measure_time(
             s_time,
-            " Lorentzian Classification - classifying candles",
+            f" Lorentzian Classification {self.trading_mode.symbol} - classifying candles",
         )
         s_time = basic_utilities.start_measure_time()
         if start_short_trades[-1]:
@@ -1690,21 +1433,21 @@ class LorentzianClassificationScript(
                 await self.exit_long_trade()
         basic_utilities.end_measure_time(
             s_time,
-            " Lorentzian Classification - trading eventual singals",
+            f" Lorentzian Classification {self.trading_mode.symbol} - trading eventual singals",
         )
 
     def _cache_backtesting_signals(
         self,
-        ctx,
-        s_time,
-        candle_times,
-        start_short_trades,
-        start_long_trades,
-        exit_short_trades,
-        exit_long_trades,
-    ) -> bool:
+        ctx: context_management.Context,
+        s_time: float,
+        candle_times: npt.NDArray[numpy.float64],
+        start_short_trades: list,
+        start_long_trades: list,
+        exit_short_trades: list,
+        exit_long_trades: list,
+    ) -> None:
         # cache signals for backtesting
-        has_exit_signals = len(exit_short_trades) and len(exit_long_trades)
+        has_exit_signals: bool = len(exit_short_trades) and len(exit_long_trades)
         if has_exit_signals:
             (
                 candle_times,
@@ -1734,14 +1477,14 @@ class LorentzianClassificationScript(
                 )
             )
         candle_times_to_whitelist: list = []
-        self.start_short_trades_cache = {}
-        self.start_long_trades_cache = {}
+        self.start_short_trades_cache: dict = {}
+        self.start_long_trades_cache: dict = {}
         if has_exit_signals:
-            self.exit_long_trades_cache = {}
-            self.exit_short_trades_cache = {}
-        trades_count = 0
+            self.exit_long_trades_cache: dict = {}
+            self.exit_short_trades_cache: dict = {}
+        trades_count: int = 0
         for index, candle_time in enumerate(candle_times):
-            candle_time = int(candle_time)
+            candle_time: int = int(candle_time)
             self.start_short_trades_cache[candle_time] = start_short_trades[index]
             self.start_long_trades_cache[candle_time] = start_long_trades[index]
             if has_exit_signals:
@@ -1754,8 +1497,12 @@ class LorentzianClassificationScript(
                     trades_count += 1
                 if start_short_trades[index]:
                     trades_count += 1
-                open_time = candle_time - (
-                    enums.TimeFramesMinutes[enums.TimeFrames(self.ctx.time_frame)] * 60
+                open_time: int = int(
+                    candle_time
+                    - (
+                        enums.TimeFramesMinutes[enums.TimeFrames(self.ctx.time_frame)]
+                        * 60
+                    )
                 )
                 candle_times_to_whitelist.append(candle_time)
                 candle_times_to_whitelist.append(open_time)
@@ -1764,11 +1511,13 @@ class LorentzianClassificationScript(
         )
         basic_utilities.end_measure_time(
             s_time,
-            f" Lorentzian Classification - building strategy for "
+            f" Lorentzian Classification {self.trading_mode.symbol} - building strategy for "
             f"{self.ctx.time_frame} {trades_count} trades",
         )
 
-    async def _trade_cached_backtesting_candles_if_available(self, ctx) -> bool:
+    async def _trade_cached_backtesting_candles_if_available(
+        self, ctx: context_management.Context
+    ) -> bool:
         if ctx.exchange_manager.is_backtesting:
             if self.start_long_trades_cache is not None:
                 trigger_cache_timestamp = int(ctx.trigger_cache_timestamp)
@@ -1793,7 +1542,7 @@ class LorentzianClassificationScript(
                     return True
         return False
 
-    async def init_order_settings(self, ctx):
+    async def init_order_settings(self, ctx: context_management.Context):
         if activate_managed_order:
             long_settings_name = "long_order_settings"
             await basic_keywords.user_input(

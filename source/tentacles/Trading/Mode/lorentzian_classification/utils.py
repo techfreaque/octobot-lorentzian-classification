@@ -1,3 +1,4 @@
+from __future__ import annotations
 import typing
 import numpy.typing as npt
 
@@ -26,27 +27,27 @@ def series_from(
         return ml_extensions.n_adx(_high, _low, _close, f_paramA)
 
 
-class GeneralSettings:
+class ClassificationSettings:
     def __init__(
         self,
-        source: str,
         neighbors_count: int,
         max_bars_back: int,
         color_compression: int,
         live_history_size: int,
         use_remote_fractals: bool,
-        use_down_sampling: bool,
+        down_sampler: typing.Callable[[int, int], bool],
         only_train_on_every_x_bars: typing.Optional[int] = None,
     ):
-        self.source: str = source
         self.neighbors_count: int = neighbors_count
         self.last_distance_neighbors_count: int = round(neighbors_count * 3 / 4)
         self.max_bars_back: int = max_bars_back
         self.color_compression: int = color_compression
         self.live_history_size: int = live_history_size
         self.use_remote_fractals: bool = use_remote_fractals
-        self.use_down_sampling: bool = use_down_sampling
-        self.only_train_on_every_x_bars: typing.Optional[int] = only_train_on_every_x_bars
+        self.only_train_on_every_x_bars: typing.Optional[
+            int
+        ] = only_train_on_every_x_bars
+        self.down_sampler: typing.Callable[[int, int], bool] = down_sampler
 
 
 class SignalDirection:
@@ -85,6 +86,40 @@ class DisplaySettings:
         self.use_atr_offset: bool = use_atr_offset
         self.enable_additional_plots: bool = enable_additional_plots
         self.bar_predictions_offset: float = bar_predictions_offset
+
+
+class SymbolSettings:
+    def __init__(
+        self,
+        symbol: str,
+        this_target_symbol: typing.Optional[str],
+        trade_on_this_pair: bool,
+        use_custom_pair: bool,
+    ):
+        self.this_target_symbol: typing.Optional[str] = this_target_symbol
+        self.trade_on_this_pair: bool = trade_on_this_pair
+        self.use_custom_pair: bool = use_custom_pair
+        self.symbol: str = symbol
+
+    def get_data_source_symbol_name(self) -> str:
+        if self.use_custom_pair:
+            return self.this_target_symbol
+        else:
+            return self.symbol
+
+
+class DataSourceSettings:
+    def __init__(
+        self,
+        available_symbols: typing.List[str],
+        symbol_settings_by_symbols: typing.Dict[str, SymbolSettings],
+        source: str,
+    ):
+        self.available_symbols: typing.List[str] = available_symbols
+        self.symbol_settings_by_symbols: typing.Dict[
+            str, SymbolSettings
+        ] = symbol_settings_by_symbols
+        self.source: str = source
 
 
 class KernelSettings:
