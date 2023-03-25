@@ -4,7 +4,7 @@ import numpy.typing as npt
 import numpy as numpy
 
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
-from tentacles.Trading.Mode.lorentzian_classification import utils
+import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
 
 def rationalQuadratic(

@@ -434,8 +434,8 @@ class LorentzianClassificationScript(
         start_short_trades: list,
         exit_short_trades: list,
         exit_long_trades: list,
-        is_buy_signals,
-        is_sell_signals,
+        is_buy_signals: list,
+        is_sell_signals: list,
     ) -> typing.Tuple[int, int]:
 
         # =========================
@@ -658,7 +658,7 @@ class LorentzianClassificationScript(
     ) -> None:
         slightly_below_lows: npt.NDArray[numpy.float64] = candle_lows * 0.999
         slightly_above_highs: npt.NDArray[numpy.float64] = candle_highs * 1.001
-        use_own_y_axis: bool = this_symbol_settings.use_custom_pair
+        # use_own_y_axis: bool = this_symbol_settings.use_custom_pair
         await self._handle_full_history_plottings(
             ctx=ctx,
             this_symbol_settings=this_symbol_settings,
@@ -944,7 +944,7 @@ class LorentzianClassificationScript(
             )
         )
         # TODO handle when custom pair
-        use_own_y_axis:bool = this_symbol_settings.use_custom_pair
+        # use_own_y_axis:bool = this_symbol_settings.use_custom_pair
         if self.trading_mode.filter_settings.plot_volatility_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
@@ -1511,7 +1511,8 @@ class LorentzianClassificationScript(
         )
         basic_utilities.end_measure_time(
             s_time,
-            f" Lorentzian Classification {self.trading_mode.symbol} - building strategy for "
+            f" Lorentzian Classification {self.trading_mode.symbol} - "
+            "building strategy for "
             f"{self.ctx.time_frame} {trades_count} trades",
         )
 
