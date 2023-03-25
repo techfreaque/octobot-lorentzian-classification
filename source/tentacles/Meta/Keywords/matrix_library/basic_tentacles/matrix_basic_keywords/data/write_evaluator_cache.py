@@ -2,6 +2,7 @@ import numpy as np
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.data.public_exchange_data as public_exchange_data
+from tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums import PriceDataSources
 
 
 async def store_evaluator_history(
@@ -14,7 +15,7 @@ async def store_evaluator_history(
 ):
     # store it in one go
     times = await public_exchange_data.get_candles_(
-        maker, "time", time_frame=maker.ctx.time_frame
+        maker, PriceDataSources.TIME.value, time_frame=maker.ctx.time_frame
     )
     data_length = len(signals_data)
     times = times[-data_length:]
@@ -63,7 +64,7 @@ async def store_indicator_history(
             round_decimals = 3
     # store it in one go
     time_data = await public_exchange_data.get_candles_(
-        maker, "time", time_frame=maker.ctx.time_frame
+        maker, PriceDataSources.TIME.value, time_frame=maker.ctx.time_frame
     )
     cut_t = time_data[-len(indicator_values) :]
     if round_decimals:

@@ -7,6 +7,7 @@ import octobot_commons.errors as commons_errors
 import octobot_trading.api.portfolio as portfolio
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
+from tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums import PriceDataSources
 import tentacles.Meta.Keywords.scripting_library.orders.order_types as order_types
 
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.orders.expired_orders_cancelling as expired_orders_cancelling
@@ -334,7 +335,7 @@ class SpotMaster3000Making(
     async def get_asset_value(self, symbol: str) -> typing.Optional[float]:
         try:
             return await public_exchange_data.get_current_candle(
-                self, "close", symbol=symbol
+                self, PriceDataSources.CLOSE.value, symbol=symbol
             )
         except (ValueError, KeyError):
             if not self.ctx.exchange_manager.is_backtesting and self.ctx.enable_trading:

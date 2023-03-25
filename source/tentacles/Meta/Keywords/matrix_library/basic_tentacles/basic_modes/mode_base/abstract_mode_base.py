@@ -1,6 +1,8 @@
 import time
 import importlib
+import asyncio
 
+import async_channel.channels as channels
 import async_channel.constants as channel_constants
 import octobot_commons.logging as logging
 import octobot_commons.enums as commons_enums
@@ -21,8 +23,6 @@ PING_PONG_STORAGE_LOADING_TIMEOUT = 1000
 
 
 class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMode):
-    get_script = property(doc='(!) Disallowed inherited')
-
     ENABLE_PRO_FEATURES = True
     AVAILABLE_API_ACTIONS = [matrix_enums.TradingModeCommands.EXECUTE]
 
@@ -236,6 +236,23 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
             )
         return consumers
 
+    async def _create_user_input_consumer(self):
+        try:
+            import octobot_services.channel as services_channels
+            user_commands_consumer = \
+                await channels.get_chan(services_channels.UserCommandsChannel.get_name()).new_consumer(
+                    self.user_commands_callback,
+                    {"bot_id": self.bot_id, "subject": self.get_name()}
+                )
+            return user_commands_consumer
+        except KeyError:
+            await asyncio.sleep(2)
+            self.logger.warning(f"{services_channels.UserCommandsChannel.get_name()} unavailable, retry in 2 seconds")
+            return await self._create_user_input_consumer()
+        except ImportError:
+            self.logger.warning("Can't connect to services channels")
+        return None
+    
     async def _mark_price_callback(
         self,
         exchange: str,

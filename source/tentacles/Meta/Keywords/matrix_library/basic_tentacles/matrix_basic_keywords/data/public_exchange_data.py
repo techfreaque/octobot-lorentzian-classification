@@ -1,5 +1,6 @@
 import typing
 import numpy
+from tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums import PriceDataSources
 
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.user_inputs2 as user_inputs2
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as utilities
@@ -10,27 +11,27 @@ async def user_select_candle_source_name(
     maker,
     indicator,
     name="Select Candle Source",
-    def_val="close",
+    def_val=PriceDataSources.CLOSE.value,
     enable_volume=False,
     show_in_summary=False,
     show_in_optimizer=False,
     order=None,
 ):
     available_data_src = [
-        "open",
-        "high",
-        "low",
-        "close",
-        "hl2",
-        "hlc3",
-        "ohlc4",
-        "Heikin Ashi open",
-        "Heikin Ashi high",
-        "Heikin Ashi low",
-        "Heikin Ashi close",
+        PriceDataSources.OPEN.value,
+        PriceDataSources.HIGH.value,
+        PriceDataSources.LOW.value,
+        PriceDataSources.CLOSE.value,
+        PriceDataSources.HL2.value,
+        PriceDataSources.HLC3.value,
+        PriceDataSources.OHLC4.value,
+        PriceDataSources.HEIKIN_ASHI_OPEN.value,
+        PriceDataSources.HEIKIN_ASHI_HIGH.value,
+        PriceDataSources.HEIKIN_ASHI_LOW.value,
+        PriceDataSources.HEIKIN_ASHI_CLOSE.value,
     ]
     if enable_volume:
-        available_data_src.append("volume")
+        available_data_src.append(PriceDataSources.VOLUME.value)
 
     source_name = await user_inputs2.user_input2(
         maker,
@@ -46,7 +47,7 @@ async def user_select_candle_source_name(
     return source_name
 
 
-async def get_candles_(maker, source_name="close", time_frame=None, symbol=None):
+async def get_candles_(maker, source_name=PriceDataSources.CLOSE.value, time_frame=None, symbol=None):
     symbol = symbol or maker.ctx.symbol
     time_frame = (
         time_frame
@@ -85,12 +86,12 @@ async def get_candles_(maker, source_name="close", time_frame=None, symbol=None)
 async def get_candle_from_time(
     maker,
     timestamp: typing.Union[int, float],
-    source_name: str = "close",
+    source_name: str = PriceDataSources.CLOSE.value,
     time_frame: typing.Optional[str] = None,
     symbol: typing.Optional[str] = None,
 ):
     times = await get_candles_(
-        maker, source_name="time", time_frame=time_frame, symbol=symbol
+        maker, source_name=PriceDataSources.TIME.value, time_frame=time_frame, symbol=symbol
     )
     candles = await get_candles_(
         maker, source_name=source_name, time_frame=time_frame, symbol=symbol
@@ -109,7 +110,7 @@ async def get_candle_from_time(
 
 
 async def get_current_candle(
-    maker, source_name="close", time_frame=None, symbol=None
+    maker, source_name=PriceDataSources.CLOSE.value, time_frame=None, symbol=None
 ) -> float:
     symbol = symbol or maker.ctx.symbol
     time_frame = time_frame or maker.ctx.time_frame
@@ -120,11 +121,11 @@ async def get_current_candle(
             time_frame=time_frame,
             symbol=symbol,
         )
-    if source_name == "close":
+    if source_name == PriceDataSources.CLOSE.value:
         return await exchange_public_data.current_candle_price(
             maker.ctx, symbol=symbol, time_frame=time_frame
         )
-    if source_name == "live":
+    if source_name == PriceDataSources.LIVE.value:
         return await exchange_public_data.current_live_price(maker.ctx, symbol=symbol)
 
 
@@ -134,7 +135,7 @@ async def _get_candles_from_name(
     symbol = symbol or maker.ctx.symbol
     time_frame = time_frame or maker.ctx.time_frame
 
-    if source_name == "close":
+    if source_name == PriceDataSources.CLOSE.value:
         return await exchange_public_data.Close(
             maker.ctx,
             symbol=symbol,
@@ -142,7 +143,7 @@ async def _get_candles_from_name(
             limit=-1,
             max_history=max_history,
         )
-    if source_name == "open":
+    if source_name == PriceDataSources.OPEN.value:
         return await exchange_public_data.Open(
             maker.ctx,
             symbol=symbol,
@@ -150,7 +151,7 @@ async def _get_candles_from_name(
             limit=-1,
             max_history=max_history,
         )
-    if source_name == "high":
+    if source_name == PriceDataSources.HIGH.value:
         return await exchange_public_data.High(
             maker.ctx,
             symbol=symbol,
@@ -158,7 +159,7 @@ async def _get_candles_from_name(
             limit=-1,
             max_history=max_history,
         )
-    if source_name == "low":
+    if source_name == PriceDataSources.LOW.value:
         return await exchange_public_data.Low(
             maker.ctx,
             symbol=symbol,
@@ -166,7 +167,7 @@ async def _get_candles_from_name(
             limit=-1,
             max_history=max_history,
         )
-    if source_name == "volume":
+    if source_name == PriceDataSources.VOLUME.value:
         return await exchange_public_data.Volume(
             maker.ctx,
             symbol=symbol,
@@ -174,7 +175,7 @@ async def _get_candles_from_name(
             limit=-1,
             max_history=max_history,
         )
-    if source_name == "time":
+    if source_name == PriceDataSources.TIME.value:
         return await exchange_public_data.Time(
             maker.ctx,
             symbol=symbol,
@@ -182,55 +183,55 @@ async def _get_candles_from_name(
             limit=-1,
             max_history=max_history,
         )
-    if source_name == "hl2":
+    if source_name == PriceDataSources.HL2.value:
         try:
             from tentacles.Evaluator.Util.candles_util import CandlesUtil
 
             return CandlesUtil.HL2(
                 await get_candles_(
-                    maker, source_name="high", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.HIGH.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="low", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.LOW.value, time_frame=time_frame, symbol=symbol
                 ),
             )
         except ImportError as error:
             raise RuntimeError("CandlesUtil tentacle is required to use HL2") from error
-    if source_name == "hlc3":
+    if source_name == PriceDataSources.HLC3.value:
         try:
             from tentacles.Evaluator.Util.candles_util import CandlesUtil
 
             return CandlesUtil.HLC3(
                 await get_candles_(
-                    maker, source_name="high", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.HIGH.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="low", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.LOW.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="close", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.CLOSE.value, time_frame=time_frame, symbol=symbol
                 ),
             )
         except ImportError as error:
             raise RuntimeError(
                 "CandlesUtil tentacle is required to use HLC3"
             ) from error
-    if source_name == "ohlc4":
+    if source_name == PriceDataSources.OHLC4.value:
         try:
             from tentacles.Evaluator.Util.candles_util import CandlesUtil
 
             return CandlesUtil.OHLC4(
                 await get_candles_(
-                    maker, source_name="open", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.OPEN.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="high", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.HIGH.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="low", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.LOW.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="close", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.CLOSE.value, time_frame=time_frame, symbol=symbol
                 ),
             )
         except ImportError as error:
@@ -243,29 +244,29 @@ async def _get_candles_from_name(
 
             haOpen, haHigh, haLow, haClose = CandlesUtil.HeikinAshi(
                 await get_candles_(
-                    maker, source_name="open", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.OPEN.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="high", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.HIGH.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="low", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.LOW.value, time_frame=time_frame, symbol=symbol
                 ),
                 await get_candles_(
-                    maker, source_name="close", time_frame=time_frame, symbol=symbol
+                    maker, source_name=PriceDataSources.CLOSE.value, time_frame=time_frame, symbol=symbol
                 ),
             )
-            maker.candles[symbol][time_frame]["Heikin Ashi open"] = haOpen
-            maker.candles[symbol][time_frame]["Heikin Ashi high"] = haHigh
-            maker.candles[symbol][time_frame]["Heikin Ashi low"] = haLow
-            maker.candles[symbol][time_frame]["Heikin Ashi close"] = haClose
-            if source_name == "Heikin Ashi close":
+            maker.candles[symbol][time_frame][PriceDataSources.HEIKIN_ASHI_OPEN.value] = haOpen
+            maker.candles[symbol][time_frame][PriceDataSources.HEIKIN_ASHI_HIGH.value] = haHigh
+            maker.candles[symbol][time_frame][PriceDataSources.HEIKIN_ASHI_LOW.value] = haLow
+            maker.candles[symbol][time_frame][PriceDataSources.HEIKIN_ASHI_CLOSE.value] = haClose
+            if source_name == PriceDataSources.HEIKIN_ASHI_CLOSE.value:
                 return haClose
-            if source_name == "Heikin Ashi open":
+            if source_name == PriceDataSources.HEIKIN_ASHI_OPEN.value:
                 return haOpen
-            if source_name == "Heikin Ashi high":
+            if source_name == PriceDataSources.HEIKIN_ASHI_HIGH.value:
                 return haHigh
-            if source_name == "Heikin Ashi low":
+            if source_name == PriceDataSources.HEIKIN_ASHI_LOW.value:
                 return haLow
         except ImportError as error:
             raise RuntimeError(

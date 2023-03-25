@@ -18,13 +18,7 @@ class LorentzianClassificationMode(settings.LorentzianClassificationModeInputs):
         if exchange_manager:
             # allow scripted trading if a
             #   profile_trading_script.py is in the current profile
-            if use_scripted_trading_mode.initialize_scripted_trading_mode(self):
-                try:
-                    self.get_script = abstract_mode_base.AbstractBaseMode.get_script
-                except AttributeError:
-                    logging.get_logger(self.get_name()).debug(
-                        "Failed add profile trading script to trading mode."
-                    )
+            use_scripted_trading_mode.initialize_scripted_trading_mode(self)
         else:
             logging.get_logger(self.get_name()).error(
                 "At least one exchange must be enabled "

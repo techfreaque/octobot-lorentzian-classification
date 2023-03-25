@@ -6,13 +6,13 @@
         "Lorentzian-Classification": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
         "Matrix-Library": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
         "Matrix-Octo-UI2": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
+        "Matrix-Pro-Tentacles": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
         "Matrix-Strategies": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
         "Matrix-Strategy-Maker": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
         "OctoBot-Default-Tentacles": "",
         "OctoBot-Private-Tentacles": "",
         "Semi-Auto-Trading-Mode": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
         "Spot-Master-3000": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
-        "Unknown package location": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip",
         "matrix-strategy-maker": "C:/Users/Max1/Desktop/projects/Octobot-Project/tentacle_zips/any_platform.zip"
     },
     "tentacle_activation": {
@@ -69,7 +69,10 @@
             "TwitterNewsEvaluator": false,
             "trade_analysis": false
         },
-        "Meta": {},
+        "Meta": {
+            "basic_tentacles": true,
+            "pro_tentacles": true
+        },
         "RunAnalysis": {},
         "Services": {
             "GoogleService": true,
