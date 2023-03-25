@@ -1,7 +1,6 @@
 import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.scripted_trading_mode.use_scripted_trading_mode as use_scripted_trading_mode
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 

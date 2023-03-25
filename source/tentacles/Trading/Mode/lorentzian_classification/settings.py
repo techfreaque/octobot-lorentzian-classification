@@ -1253,7 +1253,7 @@ class DownSamplers:
         SKIP_EVERY_X_DOWN_SAMPLER,
         NO_DOWN_SAMPLER,
     ]
-    DOWN_SAMPLERS_BY_TITLES: dict[str, typing.Callable[[int, int], bool]] = {
+    DOWN_SAMPLERS_BY_TITLES: typing.Dict[str, typing.Callable[[int, int], bool]] = {
         SKIP_EVERY_X_DOWN_SAMPLER: skip_every_x_down_sampler,
         NO_DOWN_SAMPLER: no_down_sampler,
         USE_EVERY_X_DOWN_SAMPLER: use_every_x_down_sampler,
