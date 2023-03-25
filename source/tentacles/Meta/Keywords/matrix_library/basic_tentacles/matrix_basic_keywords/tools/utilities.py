@@ -1,5 +1,6 @@
 import time
 import typing
+import numpy.typing as npt
 
 import octobot_commons.logging.logging_util as logging_util
 import octobot_commons.symbols.symbol_util as symbol_util
@@ -72,6 +73,12 @@ def cut_data_to_same_len(data_set: typing.Union[tuple, list], get_list: bool = F
     if get_list:
         return cutted_data
     return tuple(cutted_data)
+
+def shift_data(data_source: typing.Union[list, npt.NDArray[any]], shift_by: int = 1):
+    cutted_data = data_source[shift_by:]
+    shifted_data = data_source[:-shift_by]
+    return cutted_data, shifted_data
+
 
 
 def get_similar_symbol(

@@ -283,17 +283,11 @@ class Filter:
         self.is_sma_downtrend = is_sma_downtrend
 
 
-def shift_data(data_source: typing.Union[list, npt.NDArray[any]], shift_by: int = 1):
-    cutted_data = data_source[shift_by:]
-    shifted_data = data_source[:-shift_by]
-    return cutted_data, shifted_data
-
-
 def get_is_crossing_data(
     data1: npt.NDArray[numpy.float64], data2: npt.NDArray[numpy.float64]
 ) -> typing.Tuple[npt.NDArray[numpy.bool_], npt.NDArray[numpy.bool_]]:
-    data1_cutted_1, data1_shifted_1 = shift_data(data1, 1)
-    data2_cutted_1, data2_shifted_1 = shift_data(data2, 1)
+    data1_cutted_1, data1_shifted_1 = basic_utils.shift_data(data1, 1)
+    data2_cutted_1, data2_shifted_1 = basic_utils.shift_data(data2, 1)
     crossing_ups = numpy.logical_and(
         data1_shifted_1 < data2_shifted_1, data1_cutted_1 > data2_cutted_1
     )
