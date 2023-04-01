@@ -1,8 +1,0 @@
-{
-  "version": "1.0.0",
-  "origin_package": "Matrix-Tentacles",
-  "tentacles": [
-    "default_run_analysis_mode"
-  ],
-  "tentacles-requirements": []
-}

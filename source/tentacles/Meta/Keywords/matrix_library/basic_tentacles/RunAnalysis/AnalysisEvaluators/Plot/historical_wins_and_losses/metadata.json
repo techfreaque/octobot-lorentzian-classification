@@ -1,8 +1,0 @@
-{
-  "version": "1.0.0",
-  "origin_package": "Matrix-Tentacles",
-  "tentacles": [
-    "historical_wins_and_losses"
-  ],
-  "tentacles-requirements": []
-}
