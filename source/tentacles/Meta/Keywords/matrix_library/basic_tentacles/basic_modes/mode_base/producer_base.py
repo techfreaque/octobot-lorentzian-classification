@@ -107,10 +107,10 @@ class MatrixProducerBase:
             show_in_summary=False,
             show_in_optimizer=False,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                commons_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
             },
             other_schema_values={
-                matrix_enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Use "
+                commons_enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Use "
                 "those options wisely when backtesting, "
                 "as it will slow down the backtesting speed by quit a lot",
             },

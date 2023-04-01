@@ -1,3 +1,5 @@
+from tulipy import InvalidOptionError
+
 import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
@@ -43,6 +45,14 @@ class LorentzianClassificationProducer(classification.LorentzianClassificationSc
         self.action = action
         if matrix_enums.TradingModeCommands.INIT_CALL != action:
             self.allow_trading_only_on_execution(ctx)
-            await self.evaluate_lorentzian_classification(
-                ctx=ctx,
-            )
+            try:
+                await self.evaluate_lorentzian_classification(
+                    ctx=ctx,
+                )
+            except InvalidOptionError as error:
+                ctx.logger.exception(error, True,
+                    "Failed generate Filters or Features. "
+                    "Most likely due to not enough available historical bars. "
+                    "Check the historical bars in the TimeFrameStrategyEvaluator "
+                    "settings"
+                )

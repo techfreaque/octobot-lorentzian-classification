@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "origin_package": "Matrix-Tentacles",
+  "tentacles": [
+    "realized_trade_pnl"
+  ],
+  "tentacles-requirements": []
+}

@@ -1,107 +1,299 @@
-#  Drakkar-Software OctoBot-Trading
-#  Copyright (c) Drakkar-Software, All rights reserved.
-#
-#  This library is free software; you can redistribute it and/or
-#  modify it under the terms of the GNU Lesser General Public
-#  License as published by the Free Software Foundation; either
-#  version 3.0 of the License, or (at your option) any later version.
-#
-#  This library is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  Lesser General Public License for more details.
-#
-#  You should have received a copy of the GNU Lesser General Public
-#  License along with this library.
-import asyncio
 import json
+import typing
+import numpy
+import numpy.typing as npt
+from octobot_commons.logging.logging_util import BotLogger
 from octobot_trading.api.exchange import get_exchange_ids
 
-import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data.portfolios.portfolio_util as portfolio_util
 import octobot_trading.api as trading_api
 import octobot_backtesting.api as backtesting_api
-import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.constants
 import octobot_commons.enums as commons_enums
-import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.logging as commons_logging
+from tentacles.Meta.Keywords.matrix_library.basic_tentacles.RunAnalysis.RunAnalysisFactory import custom_context
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.RunAnalysis.RunAnalysisFactory.analysis_errors as analysis_errors
 
 
 class RunAnalysisBaseDataGenerator:
-    price_data = None
-    trades_data = None
-    ref_market: str = None
-    start_time: float or int = None
-    starting_portfolio: dict = None
-    moving_portfolio_data = None
-    trading_type = None
-    metadata = None
-    trading_transactions_history: list = None
-    portfolio_history_by_currency: dict = None
-    buy_fees_by_currency: dict = None
-    sell_fees_by_currency: dict = None
-    total_start_balance_in_ref_market = None
-    pairs = None
-    longest_candles = None
-    funding_fees_history_by_pair = None
-    exchange = None
-    realized_pnl_x_data: list = None
-    realized_pnl_trade_gains_data: list = None
-    realized_pnl_cumulative: list = None
-    wins_and_losses_x_data: list = []
-    wins_and_losses_data: list = []
-    win_rates_x_data: list = []
-    win_rates_data: list = []
-    best_case_growth_x_data: list = []
-    best_case_growth_data: list = []
-    historical_portfolio_values_by_coin: dict = None
-    historical_portfolio_amounts_by_coin: dict = None
-    historical_portfolio_times: list = None
-    run_database = None
-    run_display = None
-    ctx = None
-    analysis_settings = None
-    trading_transactions_history: list = None
-    buy_fees_by_currency: dict = None
-    sell_fees_by_currency: dict = None
-    portfolio_history_by_currency: dict = None
 
-    def __init__(self, ctx, run_database, run_display, metadata):
+    logger: BotLogger = commons_logging.get_logger("RunAnalysisBaseDataGenerator")
+
+    def __init__(
+        self,
+        ctx,
+        run_database,
+        run_display,
+        metadata,
+        is_backtesting,
+        main_plotted_element,
+        sub_plotted_element,
+    ):
+        self._candles_by_symbol_and_time_frame: typing.Dict[
+            str,
+            typing.Dict[str, typing.List[npt.NDArray[numpy.float64]]],
+        ] = {}
+        self._metadata = None
+        self._trades = None
+        self._orders = None
+        self._transactions = None
+        self._cached_values_by_symbols: dict = {}
+        self._symbols_dbs: dict = {}
+        self._plotted_elements_by_chart: dict = {}
+        self._portfolio_history = None
+
+        self.start_time: typing.Union[float, int] = None
+        self.end_time: typing.Union[float, int] = None
+
+        # TODO remove
+        self._plotted_elements_by_chart["main-chart"] = main_plotted_element
+        self._plotted_elements_by_chart["sub-chart"] = sub_plotted_element
+
         self.run_database = run_database
         self.run_display = run_display
-        self.ctx = ctx
+        self.ctx: custom_context.Context = ctx
+        self.exchange_name: str = ctx.exchange_name
+        self.config: dict = ctx.analysis_settings
         self.metadata = metadata
-        self.analysis_settings = ctx.analysis_settings
+        self.account_type = None
+        self.is_backtesting = is_backtesting
+        self.ref_market: str = None
+        self.trading_type = None
+        self.pairs = None
+        
+        # TODO check if needed
+        self.price_data = None
+        self.trades_data = None
+        self.starting_portfolio: dict = None
+        self.moving_portfolio_data = None
+        self.trading_transactions_history: list = None
+        self.portfolio_history_by_currency: dict = None
+        self.buy_fees_by_currency: dict = None
+        self.sell_fees_by_currency: dict = None
+        self.total_start_balance_in_ref_market = None
+        self.longest_candles = None
+        self.funding_fees_history_by_pair = None
+        self.realized_pnl_x_data: list = None
+        self.realized_pnl_trade_gains_data: list = None
+        self.realized_pnl_cumulative: list = None
+        self.wins_and_losses_x_data: list = []
+        self.wins_and_losses_data: list = []
+        self.win_rates_x_data: list = []
+        self.win_rates_data: list = []
+        self.best_case_growth_x_data: list = []
+        self.best_case_growth_data: list = []
+        self.historical_portfolio_values_by_coin: dict = None
+        self.historical_portfolio_amounts_by_coin: dict = None
+        self.historical_portfolio_times: list = None
+
         self.trading_transactions_history: list = None
         self.buy_fees_by_currency: dict = None
         self.sell_fees_by_currency: dict = None
         self.portfolio_history_by_currency: dict = None
-        self.account_type = None
 
-    async def load_base_data(self):
-        await self.load_historical_values()
-        await self.generate_transactions()
+        self.trading_transactions_history: list = None
+        self.buy_fees_by_currency: dict = None
+        self.sell_fees_by_currency: dict = None
+        self.portfolio_history_by_currency: dict = None
 
-        # todo all coins balance
-        self.total_start_balance_in_ref_market = self.starting_portfolio.get(
-            self.ref_market, {}
-        ).get("total", 0)
-        self.pairs = list(self.trades_data)
-        self._set_longest_candles()
+    def get_plotted_element(self, chart_location="main-chart"):
+        return self._plotted_elements_by_chart[chart_location]
 
-    async def get_trades(self, symbol):
-        return await self.run_database.get_trades_db(
-            self.account_type, exchange=self.exchange
-        ).select(
-            commons_enums.DBTables.TRADES.value,
-            (
-                await self.run_database.get_orders_db(
-                    self.account_type, exchange=self.exchange
-                ).search()
-            ).symbol
-            == symbol,
+    async def get_candles(self, symbol: str, time_frame: str):
+        if not self._candles_by_symbol_and_time_frame.get(symbol, {}).get(time_frame):
+            await self._load_candles(symbol, time_frame)
+        return self._candles_by_symbol_and_time_frame[symbol][time_frame]
+
+    async def _load_candles(self, symbol: str, time_frame: str):
+        candles_sources = await self.get_symbols_db(symbol).all(
+            commons_enums.DBTables.CANDLES_SOURCE.value
         )
+        # TODO use is backtesting
+        if not candles_sources or (
+            candles_sources[0][commons_enums.DBRows.VALUE.value]
+            == octobot_commons.constants.LOCAL_BOT_DATA
+        ):
+            candles = self._get_live_candles(symbol, time_frame)
+        else:
+            candles = self._get_backtesting_candles(symbol, time_frame, candles_sources)
+        if not self._candles_by_symbol_and_time_frame.get(symbol):
+            self._candles_by_symbol_and_time_frame[symbol] = {}
+        self._candles_by_symbol_and_time_frame[symbol][time_frame] = candles
+
+    async def _get_backtesting_candles(
+        self, symbol: str, time_frame: str, candles_sources
+    ) -> typing.List[npt.NDArray[numpy.float64]]:
+        raw_candles = await backtesting_api.get_all_ohlcvs(
+            candles_sources[0][commons_enums.DBRows.VALUE.value],
+            self.exchange_name,
+            symbol,
+            commons_enums.TimeFrames(time_frame),
+            inferior_timestamp=self.metadata[commons_enums.DBRows.START_TIME.value],
+            superior_timestamp=self.metadata[commons_enums.DBRows.END_TIME.value],
+        )
+        # convert candles timestamp in millis
+        opens = []
+        highs = []
+        lows = []
+        closes = []
+        volumes = []
+        times = []
+        for candle in raw_candles:
+            opens.append(candle[commons_enums.PriceIndexes.IND_PRICE_OPEN.value])
+            highs.append(candle[commons_enums.PriceIndexes.IND_PRICE_HIGH.value])
+            lows.append(candle[commons_enums.PriceIndexes.IND_PRICE_LOW.value])
+            closes.append(candle[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value])
+            volumes.append(candle[commons_enums.PriceIndexes.IND_PRICE_VOL.value])
+            times.append(candle[commons_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000)
+        return [
+            numpy.array(times),
+            numpy.array(opens),
+            numpy.array(highs),
+            numpy.array(lows),
+            numpy.array(closes),
+            numpy.array(volumes),
+        ]
+
+    def _get_live_candles(
+        self, symbol, time_frame
+    ) -> typing.List[npt.NDArray[numpy.float64]]:
+        # todo get/download history from first tradetime or start time
+        # todo multi exchange
+        exchange_manager = trading_api.get_exchange_manager_from_exchange_id(
+            get_exchange_ids()[0]
+        )
+        raw_candles = trading_api.get_symbol_historical_candles(
+            trading_api.get_symbol_data(exchange_manager, symbol, allow_creation=True),
+            time_frame,
+        )
+        for index in range(
+            len(raw_candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value])
+        ):
+            raw_candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value][index] *= 1000
+        return [
+            raw_candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value],
+            raw_candles[commons_enums.PriceIndexes.IND_PRICE_OPEN.value],
+            raw_candles[commons_enums.PriceIndexes.IND_PRICE_HIGH.value],
+            raw_candles[commons_enums.PriceIndexes.IND_PRICE_LOW.value],
+            raw_candles[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value],
+            raw_candles[commons_enums.PriceIndexes.IND_PRICE_VOL.value],
+        ]
+
+    def get_metadata(self):
+        if not self._metadata:
+            self._load_metadata()
+        return self._metadata
+
+    def _load_metadata(self):
+        pass
+
+    async def get_trades(self):
+        if not self._trades:
+            await self._load_trades()
+        return self._trades
+
+    async def _load_trades(self):
+        self._trades = await self.run_database.get_trades_db(
+            self.account_type, exchange=self.exchange_name
+        ).all(
+            commons_enums.DBTables.TRADES.value,
+        )
+
+    async def get_orders(self):
+        if not self._orders:
+            await self._load_orders()
+        return self._orders
+
+    async def _load_orders(self):
+        self._orders = await self.run_database.get_orders_db(
+            self.account_type, exchange=self.exchange_name
+        ).all(
+            commons_enums.DBTables.ORDERS.value,
+        )
+
+    async def get_cached_values(self, symbol: str):
+        if not self._cached_values_by_symbols.get(symbol):
+            await self._load_cached_values(symbol)
+        return self._cached_values_by_symbols[symbol]
+
+    async def _load_cached_values(self, symbol: str):
+        self._cached_values_by_symbols[symbol] = await self.get_symbols_db(symbol).all(
+            commons_enums.DBTables.CACHE_SOURCE.value
+        )
+
+    def get_symbols_db(self, symbol: str):
+        if not self._symbols_dbs.get(symbol):
+            self._load_symbols_db(symbol)
+        return self._symbols_dbs[symbol]
+
+    def _load_symbols_db(self, symbol: str):
+        self._symbols_dbs[symbol] = self.run_database.get_symbol_db(
+            self.exchange_name, symbol
+        )
+
+    async def get_transactions(self):
+        if not self._transactions:
+            self._load_transactions()
+        return self._transactions
+
+    async def _load_transactions(self):
+        self._transactions = await self.run_database.get_transactions_db(
+            self.account_type, exchange=self.exchange_name
+        ).all(
+            commons_enums.DBTables.TRANSACTIONS.value,
+        )
+
+    def get_portfolio_history(self):
+        if not self._portfolio_history:
+            self._load_portfolio_history()
+        return self._portfolio_history
+
+    def _load_portfolio_history(self):
+        pass
+
+    async def load_base_data(self, exchange_id: str):
+        # await self.load_historical_values()
+        # await self.generate_transactions()
+        self.start_time: float or int = self.metadata["start_time"]
+        self.end_time: float or int = self.metadata["end_time"]
+        if self.end_time == -1:
+            self.end_time = 10000000000000
+        self.load_starting_portfolio()
+        # self.exchange_name = (
+        #     self.exchange_name
+        #     or self.metadata[commons_enums.DBRows.EXCHANGES.value][0]
+        #     or (
+        #         self.run_database.run_dbs_identifier.context.exchange_name
+        #         if self.run_database.run_dbs_identifier.context
+        #         else None
+        #     )
+        # )
+        # TODO handle multi exchanges
+        self.ref_market = self.metadata[commons_enums.DBRows.REFERENCE_MARKET.value]
+
+        self.trading_type = self.metadata[commons_enums.DBRows.TRADING_TYPE.value]
+
+        self.account_type = (
+            trading_api.get_account_type_from_run_metadata(self.metadata)
+            if self.is_backtesting
+            else trading_api.get_account_type_from_exchange_manager(
+                trading_api.get_exchange_manager_from_exchange_id(exchange_id)
+            )
+        )
+
+        contracts = (
+            self.metadata[commons_enums.DBRows.FUTURE_CONTRACTS.value][
+                self.exchange_name
+            ]
+            if self.trading_type == "future"
+            else {}
+        )
+        # todo all coins balance
+        # self.total_start_balance_in_ref_market = self.starting_portfolio.get(
+        #     self.ref_market, {}
+        # ).get("total", 0)
+        # self.pairs = list(self.trades_data)
+        # self._set_longest_candles()
 
     def load_starting_portfolio(self) -> dict:
         portfolio = self.metadata[
@@ -111,105 +303,78 @@ class RunAnalysisBaseDataGenerator:
 
     async def load_historical_values(
         self,
-        exchange=None,
-        with_candles=True,
-        with_trades=True,
-        with_portfolio=True,
-        time_frame=None,
-        did_retry=False,
+        exchange_name: str,
+        exchange_id: str,
+        symbol: str,
+        time_frame: str,
+        is_backtesting: bool,
     ):
         self.price_data = {}
         self.trades_data = {}
         self.moving_portfolio_data = {}
-        self.start_time: float or int = self.metadata["start_time"]
-        self.load_starting_portfolio()
-        self.exchange = (
-            exchange
-            or self.metadata[commons_enums.DBRows.EXCHANGES.value][0]
-            or (
-                self.run_database.run_dbs_identifier.context.exchange_name
-                if self.run_database.run_dbs_identifier.context
-                else None
-            )
-        )  # TODO handle multi exchanges
-        self.ref_market = self.metadata[commons_enums.DBRows.REFERENCE_MARKET.value]
-        self.trading_type = self.metadata[commons_enums.DBRows.TRADING_TYPE.value]
 
-        # exchange_manager = trading_api.get_exchange_manager_from_exchange_id(
-        #     exchange_id)
-        # if exchange_manager.is_backtesting:
-        self.account_type = trading_api.get_account_type_from_run_metadata(
-            self.metadata
-        )
-        # else:
-        #     account_type = trading_api.get_account_type_from_exchange_manager(
-        #         exchange_manager)
+        # await self.run_database.get_symbol_db(self.exchange_name, pair)
 
-        contracts = (
-            self.metadata[commons_enums.DBRows.FUTURE_CONTRACTS.value][self.exchange]
-            if self.trading_type == "future"
-            else {}
-        )
-        # init data
-        for pair in self.metadata[commons_enums.DBRows.SYMBOLS.value]:
-            symbol = symbol_util.parse_symbol(pair).base
-            is_inverse_contract = (
-                self.trading_type == "future"
-                and trading_api.is_inverse_future_contract(
-                    trading_enums.FutureContractType(contracts[pair]["contract_type"])
-                )
-            )
-            if symbol != self.ref_market or is_inverse_contract:
-                candles_sources = await self.run_database.get_symbol_db(
-                    self.exchange, pair
-                ).all(commons_enums.DBTables.CANDLES_SOURCE.value)
-                time_frames = None
-                if time_frame is None:
-                    time_frames = [
-                        source[commons_enums.DBRows.TIME_FRAME.value]
-                        for source in candles_sources
-                    ]
-                    time_frame = (
-                        time_frame_manager.find_min_time_frame(time_frames)
-                        if time_frames
-                        else time_frame
-                    )
-                if with_candles and pair not in self.price_data:
-                    try:
-                        self.price_data[pair] = await self._get_candles(
-                            candles_sources, pair, time_frame
-                        )
-                    except KeyError as error:
-                        if did_retry:
-                            raise CandlesLoadingError(
-                                f"Unable to load {pair}/{time_frames} candles"
-                            ) from error
-                        await asyncio.sleep(5)
-                        return await self.load_historical_values(
-                            exchange=exchange,
-                            with_candles=with_candles,
-                            with_trades=with_trades,
-                            with_portfolio=with_portfolio,
-                            time_frame=time_frame,
-                            did_retry=True,
-                        )
-                if with_trades and pair not in self.trades_data:
-                    self.trades_data[pair] = await self.get_trades(pair)
-            if with_portfolio:
-                try:
-                    self.moving_portfolio_data[symbol] = self.starting_portfolio[
-                        symbol
-                    ][octobot_commons.constants.PORTFOLIO_TOTAL]
-                except KeyError:
-                    self.moving_portfolio_data[symbol] = 0
-                try:
-                    self.moving_portfolio_data[
-                        self.ref_market
-                    ] = self.starting_portfolio[self.ref_market][
-                        octobot_commons.constants.PORTFOLIO_TOTAL
-                    ]
-                except KeyError:
-                    self.moving_portfolio_data[self.ref_market] = 0
+        # # init data
+        # for pair in self.metadata[commons_enums.DBRows.SYMBOLS.value]:
+        #     symbol = symbol_util.parse_symbol(pair).base
+        #     is_inverse_contract = (
+        #         self.trading_type == "future"
+        #         and trading_api.is_inverse_future_contract(
+        #             trading_enums.FutureContractType(contracts[pair]["contract_type"])
+        #         )
+        #     )
+        #     if symbol != self.ref_market or is_inverse_contract:
+        #         candles_sources = await self.run_database.get_symbol_db(
+        #             self.exchange_name, pair
+        #         ).all(commons_enums.DBTables.CANDLES_SOURCE.value)
+        #         time_frames = None
+        #         if time_frame is None:
+        #             time_frames = [
+        #                 source[commons_enums.DBRows.TIME_FRAME.value]
+        #                 for source in candles_sources
+        #             ]
+        #             time_frame = (
+        #                 time_frame_manager.find_min_time_frame(time_frames)
+        #                 if time_frames
+        #                 else time_frame
+        #             )
+        #         if with_candles and pair not in self.price_data:
+        #             try:
+        #                 self.price_data[pair] = await self._get_candles(
+        #                     candles_sources, pair, time_frame
+        #                 )
+        #             except KeyError as error:
+        #                 if did_retry:
+        #                     raise analysis_errors.CandlesLoadingError(
+        #                         f"Unable to load {pair}/{time_frames} candles"
+        #                     ) from error
+        #                 await asyncio.sleep(5)
+        #                 return await self.load_historical_values(
+        #                     exchange=exchange,
+        #                     with_candles=with_candles,
+        #                     with_trades=with_trades,
+        #                     with_portfolio=with_portfolio,
+        #                     time_frame=time_frame,
+        #                     did_retry=True,
+        #                 )
+        #         if with_trades and pair not in self.trades_data:
+        #             self.trades_data[pair] = await self.get_trades(pair)
+        #     if with_portfolio:
+        #         try:
+        #             self.moving_portfolio_data[symbol] = self.starting_portfolio[
+        #                 symbol
+        #             ][octobot_commons.constants.PORTFOLIO_TOTAL]
+        #         except KeyError:
+        #             self.moving_portfolio_data[symbol] = 0
+        #         try:
+        #             self.moving_portfolio_data[
+        #                 self.ref_market
+        #             ] = self.starting_portfolio[self.ref_market][
+        #                 octobot_commons.constants.PORTFOLIO_TOTAL
+        #             ]
+        #         except KeyError:
+        #             self.moving_portfolio_data[self.ref_market] = 0
 
     async def _get_candles(self, candles_sources, pair, time_frame) -> list:
         try:
@@ -222,46 +387,14 @@ class RunAnalysisBaseDataGenerator:
                 candles_sources, pair, time_frame
             )
         except IndexError as error:
-            raise CandlesLoadingError from error
+            raise analysis_errors.CandlesLoadingError from error
         except Exception as error:
-            raise CandlesLoadingError from error
-
-    def _get_live_candles(self, symbol, time_frame):
-        # todo get/download history from first tradetime or start time
-        # todo multi exchange
-        exchange_manager = trading_api.get_exchange_manager_from_exchange_id(
-            get_exchange_ids()[0]
-        )
-        _raw_candles = trading_api.get_symbol_historical_candles(
-            trading_api.get_symbol_data(exchange_manager, symbol, allow_creation=True),
-            time_frame,
-        )
-        raw_candles = []
-        for index in range(len(_raw_candles[0])):
-            raw_candles.append(
-                [
-                    # convert candles timestamp in millis
-                    _raw_candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value][index]
-                    * 1000,
-                    _raw_candles[commons_enums.PriceIndexes.IND_PRICE_OPEN.value][
-                        index
-                    ],
-                    _raw_candles[commons_enums.PriceIndexes.IND_PRICE_HIGH.value][
-                        index
-                    ],
-                    _raw_candles[commons_enums.PriceIndexes.IND_PRICE_LOW.value][index],
-                    _raw_candles[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value][
-                        index
-                    ],
-                    _raw_candles[commons_enums.PriceIndexes.IND_PRICE_VOL.value][index],
-                ]
-            )
-        return raw_candles
+            raise analysis_errors.CandlesLoadingError from error
 
     async def _get_backtesting_candles(self, candles_sources, symbol, time_frame):
         raw_candles = await backtesting_api.get_all_ohlcvs(
             candles_sources[0][commons_enums.DBRows.VALUE.value],
-            self.exchange,
+            self.exchange_name,
             symbol,
             commons_enums.TimeFrames(time_frame),
             inferior_timestamp=self.metadata[commons_enums.DBRows.START_TIME.value],
@@ -640,9 +773,3 @@ def get_base_data_logger(_=None):
 #         trading_enums.FutureContractType(contract_data["contract_type"]),
 #     )
 #     return trading_personal_data.create_position_from_type(_TraderMock(), contract)
-
-
-class CandlesLoadingError(Exception):
-    """
-    raised when unable to load candles
-    """

@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "origin_package": "Matrix-Tentacles",
+  "tentacles": [
+    "best_case_growth"
+  ],
+  "tentacles-requirements": []
+}

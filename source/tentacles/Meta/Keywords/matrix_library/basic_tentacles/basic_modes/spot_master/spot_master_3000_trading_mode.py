@@ -1,5 +1,5 @@
 import decimal
-from math import ceil
+import math
 import typing
 
 import octobot_commons.symbols.symbol_util as symbol_util
@@ -7,20 +7,14 @@ import octobot_commons.errors as commons_errors
 import octobot_trading.api.portfolio as portfolio
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
-from tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums import PriceDataSources
 import tentacles.Meta.Keywords.scripting_library.orders.order_types as order_types
 
+import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.orders.expired_orders_cancelling as expired_orders_cancelling
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.data.public_exchange_data as public_exchange_data
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_enums as spot_master_enums
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_3000_trading_mode_settings as spot_master_3000_trading_mode_settings
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.asset as asset
-
-
-try:
-    import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
-except (ImportError, ModuleNotFoundError):
-    activate_managed_order = None
 
 
 class SpotMaster3000Making(
@@ -128,12 +122,16 @@ class SpotMaster3000Making(
                         order_side=order_to_execute.change_side,
                     )
                     if amount:
-                        await activate_managed_order.managed_order(
-                            self,
-                            forced_amount=amount,
-                            trading_side=order_to_execute.change_side,
-                            orders_settings=self.managed_order_settings,
-                        )
+                        try:
+                            import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+                            await activate_managed_order.managed_order(
+                                self,
+                                forced_amount=amount,
+                                trading_side=order_to_execute.change_side,
+                                orders_settings=self.managed_order_settings,
+                            )
+                        except (ImportError, ModuleNotFoundError):
+                            self.ctx.logger.error("Failed to import managed order pro")
 
     def initialize_portfolio_values(self) -> bool:
         self.portfolio = portfolio.get_portfolio(self.ctx.exchange_manager)
@@ -335,7 +333,7 @@ class SpotMaster3000Making(
     async def get_asset_value(self, symbol: str) -> typing.Optional[float]:
         try:
             return await public_exchange_data.get_current_candle(
-                self, PriceDataSources.CLOSE.value, symbol=symbol
+                self, matrix_enums.PriceDataSources.CLOSE.value, symbol=symbol
             )
         except (ValueError, KeyError):
             if not self.ctx.exchange_manager.is_backtesting and self.ctx.enable_trading:
@@ -464,5 +462,5 @@ class SpotMaster3000Making(
 
 
 def float_round(num: float, places: int = 0) -> float:
-    direction = ceil
+    direction = math.ceil
     return direction(num * (10**places)) / float(10**places)

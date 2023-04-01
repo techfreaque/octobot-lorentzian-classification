@@ -95,10 +95,12 @@ class SymbolSettings:
         this_target_symbol: typing.Optional[str],
         trade_on_this_pair: bool,
         use_custom_pair: bool,
+        inverse_signals: bool,
     ):
         self.this_target_symbol: typing.Optional[str] = this_target_symbol
         self.trade_on_this_pair: bool = trade_on_this_pair
         self.use_custom_pair: bool = use_custom_pair
+        self.inverse_signals: bool = inverse_signals
         self.symbol: str = symbol
 
     def get_data_source_symbol_name(self) -> str:

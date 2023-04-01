@@ -35,11 +35,13 @@
     },
     "profile": {
         "avatar": "matrix-icon.png",
+        "complexity": 2,
         "description": "see https://github.com/techfreaque/octobot-lorentzian-classification for more details",
         "id": "lorentzian_classification_default",
         "imported": true,
         "name": "Lorentzian Classification",
         "origin_url": "https://raw.githubusercontent.com/techfreaque/octobot-lorentzian-classification/main/releases/profile/lorentzian-classification_profile.zip",
-        "read_only": false
+        "read_only": false,
+        "risk": 2
     }
 }

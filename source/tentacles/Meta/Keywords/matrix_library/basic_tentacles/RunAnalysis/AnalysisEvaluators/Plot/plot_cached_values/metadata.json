@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "origin_package": "Matrix-Tentacles",
+  "tentacles": [
+    "plot_cached_values"
+  ],
+  "tentacles-requirements": []
+}

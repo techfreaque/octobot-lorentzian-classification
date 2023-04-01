@@ -9,11 +9,6 @@ import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywo
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.spot_master.spot_master_enums as spot_master_enums
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 
-try:
-    import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
-except (ImportError, ModuleNotFoundError):
-    activate_managed_order = None
-
 
 class SpotMaster3000ModeSettings(
     abstract_producer_base.AbstractBaseModeProducer,
@@ -48,17 +43,19 @@ class SpotMaster3000ModeSettings(
         matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value,
     ]
     live_plotting_mode: str = matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value
-    if activate_managed_order:
+    try:
+        import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
         available_order_types: list = [
             spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value,
             spot_master_enums.SpotMasterOrderTypes.MARKET.value,
             spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
         ]
-    else:
+    except (ImportError, ModuleNotFoundError):
         available_order_types: list = [
             spot_master_enums.SpotMasterOrderTypes.MARKET.value,
             spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
         ]
+
     managed_order_settings = None
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
@@ -326,17 +323,21 @@ class SpotMaster3000ModeSettings(
             self.order_type
             == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
         ):
-            self.managed_order_settings = (
-                await activate_managed_order.activate_managed_orders(
-                    self,
-                    parent_input_name=self.order_settings_name,
-                    order_tag_prefix="spot",
-                    name_prefix="smaster",
-                    enable_position_size_settings=False,
-                    enable_stop_loss_settings=False,
-                    enable_take_profit_settings=False,
+            try:
+                import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+                self.managed_order_settings = (
+                    await activate_managed_order.activate_managed_orders(
+                        self,
+                        parent_input_name=self.order_settings_name,
+                        order_tag_prefix="spot",
+                        name_prefix="smaster",
+                        enable_position_size_settings=False,
+                        enable_stop_loss_settings=False,
+                        enable_take_profit_settings=False,
+                    )
                 )
-            )
+            except (ImportError, ModuleNotFoundError):
+                self.ctx.error("Failed to import managed order pro")
         else:
             entry_settings_name = "entry_settings"
             if self.order_type == spot_master_enums.SpotMasterOrderTypes.LIMIT.value:

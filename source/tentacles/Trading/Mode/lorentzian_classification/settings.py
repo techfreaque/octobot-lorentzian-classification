@@ -48,8 +48,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Data Source Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
         source = self.UI.user_input(
@@ -67,7 +67,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             ],
             title="Candle source",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
             },
             parent_input_name=DATA_SOURCE_SETTINGS_NAME,
             other_schema_values={"description": "Source of the input data"},
@@ -83,8 +83,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 inputs,
                 title=f"{symbol} Data Source Settings",
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 4,
-                    matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 4,
+                    enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
                 },
                 parent_input_name=DATA_SOURCE_SETTINGS_NAME,
             )
@@ -99,12 +99,30 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "description": f"Enable this option to trade on {symbol}"
                 },
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                 },
             )
             this_target_symbol: typing.Optional[str] = None
+            inverse_signals: bool = False
             use_custom_pair: bool = False
             if trade_on_this_pair and len(available_symbols):
+                inverse_signals = self.UI.user_input(
+                    f"inverse_signals_{symbol}",
+                    enums.UserInputTypes.BOOLEAN,
+                    False,
+                    inputs,
+                    title=f"Inverse the signals of the strategy for {symbol}",
+                    parent_input_name=this_symbol_data_source_settings,
+                    other_schema_values={
+                        "description": "Sells on long signals and buys on short "
+                        "signals. This option can be used to trade short tokens. "
+                        "As short tokens will grow in value if the underlying asset "
+                        "price decreases."
+                    },
+                    editor_options={
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    },
+                )
                 use_custom_pair = self.UI.user_input(
                     f"enable_custom_source_{symbol}",
                     enums.UserInputTypes.BOOLEAN,
@@ -117,7 +135,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                         f"symbols data to trade on {symbol}."
                     },
                     editor_options={
-                        matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                     },
                 )
                 if use_custom_pair:
@@ -135,7 +153,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                             f"available pair to trade on {symbol}."
                         },
                         editor_options={
-                            matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                            enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                         },
                     )
             symbol_settings_by_symbols[symbol] = utils.SymbolSettings(
@@ -143,6 +161,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 this_target_symbol=this_target_symbol,
                 trade_on_this_pair=trade_on_this_pair,
                 use_custom_pair=use_custom_pair,
+                inverse_signals=inverse_signals,
             )
 
         self.data_source_settings: utils.DataSourceSettings = utils.DataSourceSettings(
@@ -159,8 +178,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="General Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
 
@@ -174,7 +193,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Neighbors Count",
             parent_input_name=GENERAL_SETTINGS_NAME,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
             other_schema_values={
                 "description": "Number of similar neighbors to consider "
@@ -182,11 +201,12 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             },
             order=1,
         )
+        config_candles = self.get_config_candles()
         default_max_bars_back = (
             2000
-            if self.config[commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT]
+            if config_candles
             >= 2000
-            else self.config[commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT]
+            else  config_candles
         )
         max_bars_back = self.UI.user_input(
             "max_bars_back",
@@ -194,9 +214,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             default_max_bars_back,
             inputs,
             min_val=1,
-            max_val=self.config[
-                commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT
-            ],
+            max_val=config_candles,
             title="Max Bars Back",
             parent_input_name=GENERAL_SETTINGS_NAME,
             other_schema_values={
@@ -205,7 +223,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 "candles' in the TimeFrameStrategyEvaluator settings."
             },
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
             order=2,
         )
@@ -224,7 +242,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 "which will result in a more diverse training data."
             },
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
             order=3,
         )
@@ -267,7 +285,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 parent_input_name=GENERAL_SETTINGS_NAME,
                 other_schema_values={"description": description},
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                 },
                 order=4,
             )
@@ -279,7 +297,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Use Remote Fractals",
             parent_input_name=GENERAL_SETTINGS_NAME,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
             other_schema_values={
                 "description": "When the option is enabled, the model will utilize "
@@ -314,9 +332,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             neighbors_count=neighbors_count,
             use_remote_fractals=use_remote_fractals,
             only_train_on_every_x_bars=only_train_on_every_x_bars,
-            live_history_size=self.config[
-                commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT
-            ],
+            live_history_size=config_candles,
             max_bars_back=max_bars_back,
             color_compression=color_compression,
             down_sampler=this_down_sampler,
@@ -371,8 +387,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Feature Engineering Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
         feature_count = self.UI.user_input(
@@ -405,7 +421,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Feature 1",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
             },
             parent_input_name=FEATURE_ENGINEERING_SETTINGS_NAME,
         )
@@ -449,7 +465,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Feature 2",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
             },
             parent_input_name=FEATURE_ENGINEERING_SETTINGS_NAME,
         )
@@ -503,7 +519,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 inputs,
                 title="Feature 3",
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                 },
                 parent_input_name=FEATURE_ENGINEERING_SETTINGS_NAME,
             )
@@ -551,7 +567,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     inputs,
                     title="Feature 4",
                     editor_options={
-                        matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                     },
                     parent_input_name=FEATURE_ENGINEERING_SETTINGS_NAME,
                 )
@@ -600,7 +616,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                         inputs,
                         title="Feature 5",
                         editor_options={
-                            matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                            enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                         },
                         parent_input_name=FEATURE_ENGINEERING_SETTINGS_NAME,
                     )
@@ -669,8 +685,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Display Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
         self.display_settings: utils.DisplaySettings = utils.DisplaySettings(
@@ -742,8 +758,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Kernel Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
         self.kernel_settings: utils.KernelSettings = utils.KernelSettings(
@@ -755,7 +771,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Trade with Kernel",
                 parent_input_name=KERNEL_SETTINGS_NAME,
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             show_kernel_estimate=self.UI.user_input(
@@ -766,7 +782,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Show Kernel Estimate",
                 parent_input_name=KERNEL_SETTINGS_NAME,
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             use_kernel_smoothing=self.UI.user_input(
@@ -783,7 +799,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "may result in more ML entry signals being generated."
                 },
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             lookback_window=self.UI.user_input(
@@ -801,7 +817,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "Recommended range: 3-50"
                 },
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             relative_weighting=self.UI.user_input(
@@ -821,7 +837,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "Gaussian kernel. Recommended range: 0.25-25"
                 },
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             regression_level=self.UI.user_input(
@@ -840,7 +856,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     "range: 2-25"
                 },
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
             lag=self.UI.user_input(
@@ -857,7 +873,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                     " earlier crossovers. Recommended range: 1-2"
                 },
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6,
                 },
             ),
         )
@@ -870,8 +886,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Order Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
         exit_type = self.UI.user_input(
@@ -894,7 +910,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 "Switch sides: The position will switch sides on each signal.",
             },
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
             },
         )
 
@@ -910,10 +926,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Leverage",
                 parent_input_name=ORDER_SETTINGS_NAME,
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
                 },
                 other_schema_values={
-                    matrix_enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Leverage to use for futures trades"
+                    enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Leverage to use for futures trades"
                 },
             )
         long_order_volume: typing.Optional[float] = None
@@ -925,21 +941,26 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Enable long tading",
             parent_input_name=ORDER_SETTINGS_NAME,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         if enable_long_orders:
             long_order_volume = self.UI.user_input(
                 "long_order_volume",
-                enums.UserInputTypes.FLOAT,
-                50,
+                enums.UserInputTypes.TEXT,
+                "50%",
                 inputs,
-                min_val=0.1,
-                max_val=100,
-                title="% of available balance to use for long trades",
+                title="Amount to use for long trades",
                 parent_input_name=ORDER_SETTINGS_NAME,
+                other_schema_values={
+                    enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "The "
+                    "following syntax is supported: "
+                    "1. Percent of total account: '50%' "
+                    "2. Percent of availale balance: '50a%' "
+                    "3. Flat amount '5' will ""open a 5 BTC trade on BTC/USDT "
+                    },
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                 },
             )
         enable_short_orders: bool = False
@@ -953,22 +974,27 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 title="Enable short tading",
                 parent_input_name=ORDER_SETTINGS_NAME,
                 editor_options={
-                    matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
                 },
             )
             if enable_short_orders:
                 short_order_volume = self.UI.user_input(
                     "short_order_volume",
-                    enums.UserInputTypes.FLOAT,
-                    50,
-                    inputs,
-                    min_val=0.1,
-                    max_val=100,
-                    title="% of available balance to use for short trades",
-                    parent_input_name=ORDER_SETTINGS_NAME,
-                    editor_options={
-                        matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputTypes.TEXT,
+                "50%",
+                inputs,
+                title="Amount to use for short trades",
+                parent_input_name=ORDER_SETTINGS_NAME,
+                other_schema_values={
+                    enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "The "
+                    "following syntax is supported: "
+                    "1. Percent of total account: '50%' "
+                    "2. Percent of availale balance: '50a%' "
+                    "3. Flat amount '5' will ""open a 5 BTC trade on BTC/USDT "
                     },
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
                 )
         self.order_settings: utils.LorentzianOrderSettings = (
             utils.LorentzianOrderSettings(
@@ -989,8 +1015,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             inputs,
             title="Filter Settings",
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                matrix_enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
         volatility_filter_name = "volatility_filter_settings"
@@ -1002,7 +1028,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Volatility Filter Settings",
             parent_input_name=FILTER_SETTINGS_NAME,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         use_volatility_filter = self.UI.user_input(
@@ -1036,7 +1062,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Regime Filter Settings",
             parent_input_name=FILTER_SETTINGS_NAME,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         use_regime_filter = self.UI.user_input(
@@ -1082,7 +1108,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="ADX Filter Settings",
             parent_input_name=FILTER_SETTINGS_NAME,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         use_adx_filter = self.UI.user_input(
@@ -1127,7 +1153,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="EMA Filter Settings",
             parent_input_name=FILTER_SETTINGS_NAME,
             editor_options={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         use_ema_filter = self.UI.user_input(
@@ -1171,7 +1197,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="SMA Filter Settings",
             parent_input_name=FILTER_SETTINGS_NAME,
             other_schema_values={
-                matrix_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
             },
         )
         use_sma_filter = self.UI.user_input(
@@ -1222,7 +1248,9 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             sma_period=sma_period,
             plot_sma_filter=plot_sma_filter,
         )
-
+    def get_config_candles(self):
+        candles = self.config.get(commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT, 0)
+        return candles if candles > 200 else 200
 
 # downsampler options
 
