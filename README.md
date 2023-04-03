@@ -1,7 +1,7 @@
 
 
 # octobot-lorentzian-classification
-OctoBot Lorentzian Classification evaluator, based on the trading view indicator from ©jdehorty https://www.tradingview.com/script/WhBzgfDu-Machine-Learning-Lorentzian-Classification/
+OctoBot Lorentzian Classification evaluator, based on the trading view indicator from [©jdehorty](https://www.tradingview.com/script/WhBzgfDu-Machine-Learning-Lorentzian-Classification)
 
 # installation
 ## 1. tentacle package installation
@@ -21,6 +21,44 @@ OctoBot Lorentzian Classification evaluator, based on the trading view indicator
 
 # Plots / Charts on OctoBot
 * To be able to display plots from this trading mode you can install octo-ui2 from here: https://github.com/techfreaque/octo-ui-2
+
+# Change Log
+[You can find the change log here](https://github.com/techfreaque/octobot-lorentzian-classification/commits/main)
+
+# Your Donation Makes a Difference
+
+Thank you for considering donating to support this open source project! Your support allows me to continue working on new and exciting features for everyone to enjoy. As this project is developed in my free time, every donation helps to motivate me to spend more time on it and bring new ideas to life. Your contribution will go towards funding the development and maintenance of this project, and will help ensure that it remains a valuable resource for the community. Thank you for your support and for helping to make this project a reality!
+
+## USDT wallets:
+
+USDT - TRX (Tron TRC20): TYfDkrjMeL6KpDFbB5A667V5BwYE3vzium\
+USDT - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa\
+USDT - SOL (Solana): 8MeDCMQHXZJdhipkyoVUxahemuLy3ueEzuA8d8LTZe8o
+
+## BUSD wallets:
+
+BUSD - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+
+## BTC wallets
+
+BTC - BTC: 163A8EDxQPjuUYUoP9u9f91dyRPAALmER7\
+BTC - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa\
+BTC - SegWit BTC: bc1q2qnte70sdee0mw2h33jazx0dg4qd6erexzdajl\
+BTC - ETH (ERC20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+
+## BNB Wallets
+
+BNB - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa\
+BNB - ETH (ERC20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+
+## ETH wallets
+
+ETH - ETH (ERC20): 0x7bc06015304f00f5dccc22f009be313eb51396aa ETH - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+
+## DOGE wallets
+
+DOGE - DOGE: D5WteSP23WTAhM7Jh4dXxgkCL2CRjrdFJK\
+DOGE - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
 
 # Tentacle Package Download URL
 https://raw.githubusercontent.com/techfreaque/octobot-lorentzian-classification/main/releases/latest/any_platform.zip
