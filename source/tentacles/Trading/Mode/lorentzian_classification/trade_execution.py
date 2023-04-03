@@ -227,14 +227,11 @@ async def enter_short_trade(
     order_settings: utils.LorentzianOrderSettings,
     managend_orders_short_settings,
 ):
-    inverse_signals = mode_producer.trading_mode.data_source_settings.symbol_settings_by_symbols[
+    inverse_signals = (
+        mode_producer.trading_mode.data_source_settings.symbol_settings_by_symbols[
             ctx.symbol
         ].inverse_signals
-    if order_settings.enable_long_orders:
-        if inverse_signals:
-            await exit_short_trade(ctx=ctx)
-        else:
-            await exit_long_trade(ctx=ctx)
+    )
     if order_settings.enable_short_orders:
         if inverse_signals:
             trading_side = "long"
@@ -253,6 +250,11 @@ async def enter_short_trade(
                 ctx,
                 target_position=target_position,
             )
+    elif order_settings.enable_long_orders:
+        if inverse_signals:
+            await exit_short_trade(ctx=ctx)
+        else:
+            await exit_long_trade(ctx=ctx)
 
 
 async def enter_long_trade(
@@ -261,14 +263,12 @@ async def enter_long_trade(
     order_settings: utils.LorentzianOrderSettings,
     managend_orders_long_settings,
 ):
-    inverse_signals = mode_producer.trading_mode.data_source_settings.symbol_settings_by_symbols[
+    inverse_signals = (
+        mode_producer.trading_mode.data_source_settings.symbol_settings_by_symbols[
             ctx.symbol
         ].inverse_signals
-    if order_settings.enable_short_orders:
-        if inverse_signals:
-            await exit_long_trade(ctx=ctx)
-        else:
-            await exit_short_trade(ctx=ctx)
+    )
+
     if order_settings.enable_long_orders:
         if inverse_signals:
             trading_side = "short"
@@ -287,6 +287,11 @@ async def enter_long_trade(
                 ctx,
                 target_position=target_position,
             )
+    elif order_settings.enable_short_orders:
+        if inverse_signals:
+            await exit_long_trade(ctx=ctx)
+        else:
+            await exit_short_trade(ctx=ctx)
 
 
 async def exit_short_trade(ctx: context_management.Context):

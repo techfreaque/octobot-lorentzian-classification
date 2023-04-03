@@ -7,6 +7,6 @@ tags: []
 tentacles:
 - time_frame_strategy_evaluator@1.3.1
 - basic_tentacles@1.0.0
-- lorentzian_classification@1.2.2
+- lorentzian_classification@1.2.1
 type: tentacle_package
 version: unknown_version

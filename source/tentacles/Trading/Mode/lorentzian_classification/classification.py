@@ -747,6 +747,7 @@ class LorentzianClassificationScript(
             values=slightly_below_lows,
             times=candle_times,
             value_key="st-l",
+            color="green",
         )
         await matrix_plots.plot_conditional(
             ctx=ctx,
@@ -755,6 +756,7 @@ class LorentzianClassificationScript(
             values=slightly_above_highs,
             times=candle_times,
             value_key="st-s",
+            color="red",
         )
         has_exit_signals = len(exit_short_trades) and len(exit_long_trades)
         if has_exit_signals:
@@ -1048,6 +1050,7 @@ class LorentzianClassificationScript(
                 title="Candle CLoses " + this_symbol_settings.this_target_symbol,
                 cache_value="clo",
                 chart="main-chart",
+                own_yaxis=True,
             )
 
         if self.trading_mode.feature_engineering_settings.plot_features:

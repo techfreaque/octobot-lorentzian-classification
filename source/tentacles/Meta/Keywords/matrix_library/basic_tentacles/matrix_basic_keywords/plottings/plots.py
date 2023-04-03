@@ -1,3 +1,4 @@
+import typing
 from octobot_trading.modes.script_keywords.context_management import Context
 from tentacles.Meta.Keywords.scripting_library.data.writing import plotting
 
@@ -10,6 +11,7 @@ async def plot_conditional(
     times,
     value_key: str,
     chart_location: str = "main-chart",
+    color: typing.Optional[str]=None,
     own_yaxis: bool = False,
 ):
     y_values = []
@@ -31,5 +33,7 @@ async def plot_conditional(
             chart=chart_location,
             own_yaxis=own_yaxis,
             mode="markers",
+            size=7,
+            color=color,
             line_shape=None,
         )

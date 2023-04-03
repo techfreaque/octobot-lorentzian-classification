@@ -1,5 +1,5 @@
 {
-  "version": "0.9.0",
+  "version": "1.0.0",
   "origin_package": "Matrix-Basic-Tentacles",
   "tentacles": ["basic_tentacles"],
   "tentacles-requirements": []
