@@ -20,7 +20,10 @@ OctoBot Lorentzian Classification evaluator, based on the trading view indicator
 
 
 # Plots / Charts on OctoBot
-* To be able to display plots from this trading mode you can install octo-ui2 from here: https://github.com/techfreaque/octo-ui-2
+* To be able to display plots from this trading mode you can [install octo-ui2 from here](https://github.com/techfreaque/octo-ui-2)
+
+# Questions, issues, feature requests, ideas, etc
+[Post it here](https://github.com/techfreaque/octobot-lorentzian-classification/issues)
 
 # Change Log
 [You can find the change log here](https://github.com/techfreaque/octobot-lorentzian-classification/commits/main)
