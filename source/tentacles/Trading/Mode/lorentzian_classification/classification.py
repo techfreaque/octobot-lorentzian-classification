@@ -1213,7 +1213,7 @@ class LorentzianClassificationScript(
                 times=candle_times,
                 value_key="is_bullish_changes",
             )
-        if additional_values_by_key is not {}:
+        if additional_values_by_key != {}:
             first_key = next(iter(additional_values_by_key))
             first_values = additional_values_by_key[first_key]
             del additional_values_by_key[first_key]

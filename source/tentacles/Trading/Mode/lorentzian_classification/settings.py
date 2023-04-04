@@ -50,6 +50,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             editor_options={
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
             },
         )
         source = self.UI.user_input(
@@ -83,6 +84,8 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 editor_options={
                     enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 4,
                     enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
+                    
                 },
                 parent_input_name=DATA_SOURCE_SETTINGS_NAME,
             )
@@ -177,6 +180,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="General Settings",
             editor_options={
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
@@ -373,6 +377,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Feature Engineering Settings",
             editor_options={
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
@@ -667,6 +672,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Display Settings",
             editor_options={
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
@@ -740,6 +746,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Kernel Settings",
             editor_options={
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
@@ -868,6 +875,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Order Settings",
             editor_options={
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )
@@ -997,6 +1005,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             title="Filter Settings",
             editor_options={
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
             },
         )

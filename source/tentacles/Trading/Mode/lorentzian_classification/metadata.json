@@ -1,5 +1,5 @@
 {
-  "version": "1.2.2",
+  "version": "1.2.3",
   "origin_package": "Lorentzian-Classification",
   "tentacles": ["LorentzianClassificationMode"],
   "tentacles-requirements": ["TimeFrameStrategyEvaluator", "basic_tentacles"]

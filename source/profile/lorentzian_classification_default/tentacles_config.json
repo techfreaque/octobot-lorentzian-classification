@@ -48,7 +48,6 @@
             "InstantMAEvaluator": false,
             "KlingerOscillatorMomentumEvaluator": false,
             "KlingerOscillatorReversalConfirmationMomentumEvaluator": false,
-            "LorentzianClassificationEvaluator": false,
             "MACDMomentumEvaluator": false,
             "MoveSignalsStrategyEvaluator": false,
             "OverallStateAnalyser": true,

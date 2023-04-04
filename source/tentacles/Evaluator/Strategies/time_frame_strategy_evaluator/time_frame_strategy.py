@@ -32,7 +32,7 @@ class TimeFrameStrategyEvaluator(evaluators.StrategyEvaluator):
             [common_enums.TimeFrames.ONE_HOUR.value],
             inputs,
             options=[tf.value for tf in common_enums.TimeFrames],
-            title="loaded time frames (requires a restart)",
+            title="Loaded time frames (requires a restart of Octobot)",
             other_schema_values={
                 "description": "The time frames that can be accessed by the trading mode"
             },
