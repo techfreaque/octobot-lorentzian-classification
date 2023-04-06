@@ -11,6 +11,21 @@
             "binance": {
                 "enabled": true,
                 "exchange-type": "spot"
+            },
+            "binanceusdm": {
+                "enabled": false,
+                "exchange-type": "future"
+            },
+            "bybit": {
+                "enabled": false,
+                "exchange-type": "future"
+            },
+            "huobi": {
+                "enabled": false,
+                "exchange-type": "spot"
+            },
+            "kucoin": {
+                "enabled": false
             }
         },
         "trader": {
@@ -39,7 +54,7 @@
         "description": "see https://github.com/techfreaque/octobot-lorentzian-classification for more details",
         "id": "lorentzian_classification_default",
         "imported": true,
-        "name": "Lorentzian Classification",
+        "name": "Lorentzian Classification Default",
         "origin_url": "https://raw.githubusercontent.com/techfreaque/octobot-lorentzian-classification/main/releases/profile/lorentzian-classification_profile.zip",
         "read_only": false,
         "risk": 2

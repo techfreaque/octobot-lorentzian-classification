@@ -116,6 +116,7 @@ async def get_current_candle(
     time_frame = time_frame or maker.ctx.time_frame
     if maker.ctx.exchange_manager.is_backtesting:
         return await get_candle_from_time(
+            maker=maker, 
             timestamp=maker.ctx.trigger_value[0],
             source_name=source_name,
             time_frame=time_frame,
