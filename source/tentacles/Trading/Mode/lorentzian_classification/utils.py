@@ -152,12 +152,14 @@ class LorentzianOrderSettings:
         enable_short_orders: bool,
         enable_long_orders: bool,
         exit_type: str,
+        uses_managed_order: bool,
         leverage: typing.Optional[int] = None,
     ):
         self.long_order_volume: typing.Optional[float] = long_order_volume
         self.short_order_volume: typing.Optional[float] = short_order_volume
         self.enable_short_orders: bool = enable_short_orders
         self.enable_long_orders: bool = enable_long_orders
+        self.uses_managed_order: bool = uses_managed_order
         self.leverage: typing.Optional[int] = leverage
         self.exit_type: str = exit_type
 
@@ -315,3 +317,7 @@ class ExitTypes:
     FOUR_BARS = "exit after 4 bars"
     # DYNAMIC = "dynamic exit"
     SWITCH_SIDES = "switch sides on exits / entries"
+
+class OrderTypes:
+    MANAGED_ORDER = "Managed Order"
+    REGULAR_ORDER = "regular Order"

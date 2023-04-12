@@ -2,6 +2,7 @@
     "config": {
         "crypto-currencies": {
             "Bitcoin": {
+                "enabled": true,
                 "pairs": [
                     "BTC/USDT"
                 ]
@@ -11,21 +12,6 @@
             "binance": {
                 "enabled": true,
                 "exchange-type": "spot"
-            },
-            "binanceusdm": {
-                "enabled": false,
-                "exchange-type": "future"
-            },
-            "bybit": {
-                "enabled": false,
-                "exchange-type": "future"
-            },
-            "huobi": {
-                "enabled": false,
-                "exchange-type": "spot"
-            },
-            "kucoin": {
-                "enabled": false
             }
         },
         "trader": {

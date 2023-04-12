@@ -35,33 +35,34 @@ Thank you for considering donating to support this open source project! Your sup
 ## USDT wallets:
 
 USDT - TRX (Tron TRC20): TYfDkrjMeL6KpDFbB5A667V5BwYE3vzium\
-USDT - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa\
+USDT - BSC (BNB Smart Chain BEP20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4\
 USDT - SOL (Solana): 8MeDCMQHXZJdhipkyoVUxahemuLy3ueEzuA8d8LTZe8o
 
 ## BUSD wallets:
 
-BUSD - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+BUSD - BSC (BNB Smart Chain BEP20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4
 
 ## BTC wallets
 
 BTC - BTC: 163A8EDxQPjuUYUoP9u9f91dyRPAALmER7\
-BTC - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa\
+BTC - BSC (BNB Smart Chain BEP20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4\
 BTC - SegWit BTC: bc1q2qnte70sdee0mw2h33jazx0dg4qd6erexzdajl\
-BTC - ETH (ERC20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+BTC - ETH (ERC20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4
 
 ## BNB Wallets
 
-BNB - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa\
-BNB - ETH (ERC20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+BNB - BSC (BNB Smart Chain BEP20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4\
+BNB - ETH (ERC20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4
 
 ## ETH wallets
 
-ETH - ETH (ERC20): 0x7bc06015304f00f5dccc22f009be313eb51396aa ETH - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+ETH - ETH (ERC20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4 \
+ETH - BSC (BNB Smart Chain BEP20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4
 
 ## DOGE wallets
 
 DOGE - DOGE: D5WteSP23WTAhM7Jh4dXxgkCL2CRjrdFJK\
-DOGE - BSC (BNB Smart Chain BEP20): 0x7bc06015304f00f5dccc22f009be313eb51396aa
+DOGE - BSC (BNB Smart Chain BEP20): 0x723d447181844fb4f1a6e0bafefa3bfeff0623b4
 
 # Tentacle Package Download URL
 https://raw.githubusercontent.com/techfreaque/octobot-lorentzian-classification/main/releases/latest/any_platform.zip

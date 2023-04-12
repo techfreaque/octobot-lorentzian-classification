@@ -1,0 +1,100 @@
+{
+    "backtesting": {
+        "backtesting_dictionary": {},
+        "backtesting_plot": {
+            "backtesting_plot_cached_values": {
+                "enable_backtesting_plot_cached_values": true
+            },
+            "backtesting_plot_candles": {
+                "backtesting_plot_candles_chart_location": "main-chart",
+                "enable_backtesting_plot_candles": true
+            },
+            "backtesting_plot_trades": {
+                "backtesting_plot_trades_chart_location": "main-chart",
+                "backtesting_plot_trades_enabled_symbols": "Current Symbol",
+                "enable_backtesting_plot_trades": true
+            },
+            "backtesting_plothistorical_fees": {
+                "enable_backtesting_plothistorical_fees": false
+            },
+            "backtesting_plotplot_unrealized_portfolio_value": {
+                "backtesting_plotplot_unrealized_portfolio_value_chart_location": "sub-chart",
+                "enable_backtesting_plotplot_unrealized_portfolio_value": true
+            }
+        },
+        "backtesting_table": {
+            "backtesting_table_trades_table": {
+                "enable_backtesting_table_trades_table": true
+            }
+        },
+        "backtestingenable_run_analysis_mode": true,
+        "backtestingenabled_run_analyzers": [
+            "plot_candles",
+            "plot_realized_portfolio_value",
+            "plot_trades",
+            "realized_trade_pnl",
+            "withdrawals_table",
+            "realized_portfolio_value",
+            "plot_realized_trade_gains",
+            "historical_fees",
+            "plot_best_case_growth",
+            "unrealized_portfolio_value",
+            "positions_table",
+            "best_case_growth",
+            "plot_cached_values",
+            "historical_win_rates",
+            "trades_table",
+            "historical_wins_and_losses",
+            "display_metadata"
+        ]
+    },
+    "live": {
+        "live_dictionary": {},
+        "live_plot": {
+            "live_plot_cached_values": {
+                "enable_live_plot_cached_values": true
+            },
+            "live_plot_candles": {
+                "enable_live_plot_candles": true,
+                "live_plot_candles_chart_location": "main-chart"
+            },
+            "live_plot_trades": {
+                "enable_live_plot_trades": true,
+                "live_plot_trades_chart_location": "main-chart",
+                "live_plot_trades_enabled_symbols": "Current Symbol"
+            },
+            "live_plothistorical_fees": {
+                "enable_live_plothistorical_fees": false
+            },
+            "live_plotplot_unrealized_portfolio_value": {
+                "enable_live_plotplot_unrealized_portfolio_value": true,
+                "live_plotplot_unrealized_portfolio_value_chart_location": "sub-chart"
+            }
+        },
+        "live_table": {
+            "live_table_trades_table": {
+                "enable_live_table_trades_table": true
+            }
+        },
+        "liveenable_run_analysis_mode": true,
+        "liveenabled_run_analyzers": [
+            "plot_candles",
+            "plot_realized_portfolio_value",
+            "plot_trades",
+            "realized_trade_pnl",
+            "withdrawals_table",
+            "realized_portfolio_value",
+            "plot_realized_trade_gains",
+            "historical_fees",
+            "plot_best_case_growth",
+            "unrealized_portfolio_value",
+            "positions_table",
+            "best_case_growth",
+            "plot_cached_values",
+            "historical_win_rates",
+            "trades_table",
+            "historical_wins_and_losses",
+            "display_metadata"
+        ]
+    }
+}

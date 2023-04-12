@@ -3,9 +3,12 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.enums as enums
 import octobot_trading.util.config_util as config_util
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
+try:
+    import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+except (ImportError, ModuleNotFoundError):
+    activate_managed_order = None
 
 GENERAL_SETTINGS_NAME = "general_settings"
 DATA_SOURCE_SETTINGS_NAME = "data_source_settings"
@@ -84,8 +87,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 editor_options={
                     enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 4,
                     enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
-                    
+                    enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 },
                 parent_input_name=DATA_SOURCE_SETTINGS_NAME,
             )
@@ -900,25 +902,42 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             },
             editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
         )
-
-        leverage: typing.Optional[int] = None
-        if self.exchange_manager.is_future:
-            leverage = self.UI.user_input(
-                "leverage",
-                enums.UserInputTypes.INT,
-                1,
+        if activate_managed_order:
+            order_type = self.UI.user_input(
+                "order_type",
+                enums.UserInputTypes.OPTIONS,
+                utils.OrderTypes.REGULAR_ORDER,
                 inputs,
-                min_val=1,
-                max_val=125,
-                title="Leverage",
+                options=[
+                    utils.OrderTypes.MANAGED_ORDER,
+                    utils.OrderTypes.REGULAR_ORDER,
+                ],
+                title="Order Type",
                 parent_input_name=ORDER_SETTINGS_NAME,
-                editor_options={
-                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
-                },
-                other_schema_values={
-                    enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Leverage to use for futures trades"
-                },
+                editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
             )
+            uses_managed_order = order_type == utils.OrderTypes.MANAGED_ORDER
+        else:
+            uses_managed_order = False
+        leverage: typing.Optional[int] = None
+        if not uses_managed_order:
+            if self.exchange_manager.is_future:
+                leverage = self.UI.user_input(
+                    "leverage",
+                    enums.UserInputTypes.INT,
+                    1,
+                    inputs,
+                    min_val=1,
+                    max_val=125,
+                    title="Leverage",
+                    parent_input_name=ORDER_SETTINGS_NAME,
+                    editor_options={
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
+                    },
+                    other_schema_values={
+                        enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value: "Leverage to use for futures trades"
+                    },
+                )
         long_order_volume: typing.Optional[float] = None
         enable_long_orders: bool = self.UI.user_input(
             "enable_long_orders",
@@ -929,7 +948,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             parent_input_name=ORDER_SETTINGS_NAME,
             editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
         )
-        if enable_long_orders:
+        if enable_long_orders and not uses_managed_order:
             long_order_volume = self.UI.user_input(
                 "long_order_size",
                 enums.UserInputTypes.TEXT,
@@ -965,7 +984,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 "short trading is only working on futures or inversed short tokens"
             },
         )
-        if enable_short_orders:
+        if enable_short_orders and not uses_managed_order:
             short_order_volume = self.UI.user_input(
                 "short_order_size",
                 enums.UserInputTypes.TEXT,
@@ -993,6 +1012,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enable_long_orders=enable_long_orders,
                 leverage=leverage,
                 exit_type=exit_type,
+                uses_managed_order=uses_managed_order,
             )
         )
 

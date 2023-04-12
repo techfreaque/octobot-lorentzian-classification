@@ -10,10 +10,10 @@ import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_setting
 import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
 import tentacles.Trading.Mode.lorentzian_classification.utils as utils
 
-# try:
-#     import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
-# except (ImportError, ModuleNotFoundError):
-activate_managed_order = None
+try:
+    import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+except (ImportError, ModuleNotFoundError):
+    activate_managed_order = None
 
 
 class LorentzianTradeExecution:
@@ -177,46 +177,47 @@ class LorentzianTradeExecution:
         )
 
     async def init_order_settings(self, ctx: context_management.Context, leverage: int):
-        if activate_managed_order:
-            long_settings_name = "long_order_settings"
-            await basic_keywords.user_input(
-                ctx,
-                long_settings_name,
-                "object",
-                None,
-                title="Long Trade Settings",
-                editor_options={
-                    "grid_columns": 12,
-                },
-                other_schema_values={"display_as_tab": True},
-            )
-            if activate_managed_order:
+        if self.trading_mode.order_settings.uses_managed_order:
+            if self.trading_mode.order_settings.enable_long_orders:
+                long_settings_name = "long_order_settings"
+                await basic_keywords.user_input(
+                    ctx,
+                    long_settings_name,
+                    "object",
+                    None,
+                    title="Long Trade Settings",
+                    editor_options={
+                        "grid_columns": 12,
+                    },
+                    other_schema_values={"display_as_tab": True},
+                )
                 self.managend_orders_long_settings = (
+                        await activate_managed_order.activate_managed_orders(
+                            self,
+                            parent_input_name=long_settings_name,
+                            name_prefix="long",
+                        )
+                    )
+            if self.trading_mode.order_settings.enable_short_orders:
+                short_settings_name = "short_order_settings"
+                await basic_keywords.user_input(
+                    ctx,
+                    short_settings_name,
+                    "object",
+                    None,
+                    title="Short Trade Settings",
+                    editor_options={
+                        "grid_columns": 12,
+                    },
+                    other_schema_values={"display_as_tab": True},
+                )
+                self.managend_orders_short_settings = (
                     await activate_managed_order.activate_managed_orders(
                         self,
-                        parent_input_name=long_settings_name,
-                        name_prefix="long",
+                        parent_input_name=short_settings_name,
+                        name_prefix="short",
                     )
                 )
-            short_settings_name = "short_order_settings"
-            await basic_keywords.user_input(
-                ctx,
-                short_settings_name,
-                "object",
-                None,
-                title="Short Trade Settings",
-                editor_options={
-                    "grid_columns": 12,
-                },
-                other_schema_values={"display_as_tab": True},
-            )
-            self.managend_orders_short_settings = (
-                await activate_managed_order.activate_managed_orders(
-                    self,
-                    parent_input_name=short_settings_name,
-                    name_prefix="short",
-                )
-            )
         else:
             await basic_keywords.set_leverage(ctx, leverage)
 
@@ -239,7 +240,7 @@ async def enter_short_trade(
         else:
             trading_side = "short"
             target_position = f"-{order_settings.short_order_volume}"
-        if activate_managed_order:
+        if order_settings.uses_managed_order:
             await activate_managed_order.managed_order(
                 mode_producer,
                 trading_side=trading_side,
@@ -276,7 +277,7 @@ async def enter_long_trade(
         else:
             trading_side = "long"
             target_position = f"{order_settings.long_order_volume}"
-        if activate_managed_order:
+        if order_settings.uses_managed_order:
             await activate_managed_order.managed_order(
                 mode_producer,
                 trading_side=trading_side,
