@@ -1,0 +1,206 @@
+{
+    "activation_method": "once per bar close",
+    "adx_filter_settings": {
+        "use_adx_filter": false
+    },
+    "candle_source": "close",
+    "data_source_settings": {
+        "candle_source": "close",
+        "data_source_settings_BTC/USDT": {
+            "enable_custom_source_BTC/USDT": false,
+            "inverse_signals_BTC/USDT": false,
+            "trade_on_BTC/USDT": true
+        },
+        "data_source_settings_ETH/USDT": {
+            "enable_custom_source_ETH/USDT": false,
+            "inverse_signals_ETH/USDT": false,
+            "trade_on_ETH/USDT": true
+        }
+    },
+    "data_source_settings_BTC/USDT": {
+        "enable_custom_source_BTC/USDT": false,
+        "inverse_signals_BTC/USDT": false,
+        "trade_on_BTC/USDT": true
+    },
+    "data_source_settings_ETH/USDT": {
+        "enable_custom_source_ETH/USDT": false,
+        "inverse_signals_ETH/USDT": false,
+        "trade_on_ETH/USDT": true
+    },
+    "default_config": [
+        "TimeFrameStrategyEvaluator"
+    ],
+    "display_settings": {
+        "enable_additional_plots": false,
+        "plotting_mode": "Replot history mode",
+        "show_bar_predictions": false
+    },
+    "down_sampler": "Use every x candles down sampler",
+    "ema_filter_settings": {
+        "use_ema_filter": false
+    },
+    "enable_additional_plots": false,
+    "enable_custom_source_BTC/USDT": false,
+    "enable_custom_source_ETH/USDT": false,
+    "enable_long_orders": true,
+    "enable_short_orders": true,
+    "exit_type": "switch sides on exits / entries",
+    "f1_paramA": 35,
+    "f1_paramB": 1,
+    "f1_string": "RSI",
+    "f2_paramA": 40,
+    "f2_paramB": 11,
+    "f2_string": "WT",
+    "f3_paramA": 40,
+    "f3_paramB": 1,
+    "f3_string": "CCI",
+    "f4_paramA": 50,
+    "f4_paramB": 2,
+    "f4_string": "ADX",
+    "f5_paramA": 19,
+    "f5_paramB": 1,
+    "f5_string": "RSI",
+    "feature_1_settings": {
+        "f1_paramA": 35,
+        "f1_paramB": 1,
+        "f1_string": "RSI"
+    },
+    "feature_2_settings": {
+        "f2_paramA": 40,
+        "f2_paramB": 11,
+        "f2_string": "WT"
+    },
+    "feature_3_settings": {
+        "f3_paramA": 40,
+        "f3_paramB": 1,
+        "f3_string": "CCI"
+    },
+    "feature_4_settings": {
+        "f4_paramA": 50,
+        "f4_paramB": 2,
+        "f4_string": "ADX"
+    },
+    "feature_5_settings": {
+        "f5_paramA": 19,
+        "f5_paramB": 1,
+        "f5_string": "RSI"
+    },
+    "feature_count": 5,
+    "feature_engineering_settings": {
+        "feature_1_settings": {
+            "f1_paramA": 35,
+            "f1_paramB": 1,
+            "f1_string": "RSI"
+        },
+        "feature_2_settings": {
+            "f2_paramA": 40,
+            "f2_paramB": 11,
+            "f2_string": "WT"
+        },
+        "feature_3_settings": {
+            "f3_paramA": 40,
+            "f3_paramB": 1,
+            "f3_string": "CCI"
+        },
+        "feature_4_settings": {
+            "f4_paramA": 50,
+            "f4_paramB": 2,
+            "f4_string": "ADX"
+        },
+        "feature_5_settings": {
+            "f5_paramA": 19,
+            "f5_paramB": 1,
+            "f5_string": "RSI"
+        },
+        "feature_count": 5,
+        "plot_features": false
+    },
+    "filter_settings": {
+        "adx_filter_settings": {
+            "use_adx_filter": false
+        },
+        "ema_filter_settings": {
+            "use_ema_filter": false
+        },
+        "regime_filter_settings": {
+            "plot_regime_filter": false,
+            "regime_threshold": -0.1,
+            "use_regime_filter": true
+        },
+        "sma_filter_settings": {
+            "use_sma_filter": false
+        },
+        "volatility_filter_settings": {
+            "plot_volatility_filter": false,
+            "use_volatility_filter": true
+        }
+    },
+    "general_settings": {
+        "down_sampler": "Use every x candles down sampler",
+        "max_bars_back": 4900,
+        "neighbors_count": 16,
+        "only_train_on_x_bars": 4,
+        "use_remote_fractals": false
+    },
+    "inverse_signals_BTC/USDT": false,
+    "inverse_signals_ETH/USDT": false,
+    "kernel_settings": {
+        "lag": 2,
+        "lookback_window": 8,
+        "regression_level": 25,
+        "relative_weighting": 8,
+        "show_kernel_estimate": true,
+        "use_kernel_filter": true,
+        "use_kernel_smoothing": false
+    },
+    "lag": 2,
+    "long_order_size": "50%",
+    "lookback_window": 8,
+    "max_bars_back": 4900,
+    "neighbors_count": 16,
+    "only_train_on_x_bars": 4,
+    "order_settings": {
+        "enable_long_orders": true,
+        "enable_short_orders": true,
+        "exit_type": "switch sides on exits / entries",
+        "long_order_size": "50%",
+        "order_type": "regular Order",
+        "short_order_size": "50%"
+    },
+    "order_type": "regular Order",
+    "plot_features": false,
+    "plot_regime_filter": false,
+    "plot_volatility_filter": false,
+    "plotting_mode": "Replot history mode",
+    "regime_filter_settings": {
+        "plot_regime_filter": false,
+        "regime_threshold": -0.1,
+        "use_regime_filter": true
+    },
+    "regime_threshold": -0.1,
+    "regression_level": 25,
+    "relative_weighting": 8,
+    "required_strategies": [
+        "TimeFrameStrategyEvaluator"
+    ],
+    "short_order_size": "50%",
+    "show_bar_predictions": false,
+    "show_kernel_estimate": true,
+    "sma_filter_settings": {
+        "use_sma_filter": false
+    },
+    "trade_on_BTC/USDT": true,
+    "trade_on_ETH/USDT": true,
+    "use_adx_filter": false,
+    "use_ema_filter": false,
+    "use_kernel_filter": true,
+    "use_kernel_smoothing": false,
+    "use_regime_filter": true,
+    "use_remote_fractals": false,
+    "use_sma_filter": false,
+    "use_volatility_filter": true,
+    "volatility_filter_settings": {
+        "plot_volatility_filter": false,
+        "use_volatility_filter": true
+    }
+}

@@ -5,6 +5,10 @@ OctoBot Lorentzian Classification evaluator, based on the trading view indicator
 
 # installation
 ## 1. tentacle package installation
+### Install with O UI
+1. [install O UI from here](https://github.com/techfreaque/octo-ui-2)
+2. Use O UI's package manager to install the lorentzian classification strategy
+### Install package directly
 1. Make sure you have the latest OctoBot version ready -> https://octobot.online
 2. to be able to install Tentacles, enable a login password for your OctoBot under "Accounts -> Interface"
 3. then go to yourOctobotDomain.com:5001/advanced/tentacle_packages - paste the URL for the latest version (see at the bottom) and install it

@@ -6,12 +6,22 @@
                 "pairs": [
                     "BTC/USDT"
                 ]
+            },
+            "Ethereum": {
+                "enabled": true,
+                "pairs": [
+                    "ETH/USDT"
+                ]
             }
         },
         "exchanges": {
             "binance": {
                 "enabled": true,
                 "exchange-type": "spot"
+            },
+            "binanceusdm": {
+                "enabled": false,
+                "exchange-type": "future"
             }
         },
         "trader": {
@@ -22,10 +32,9 @@
             "enabled": true,
             "fees": {
                 "maker": 0.01,
-                "taker": 0.06
+                "taker": 0.01
             },
             "starting-portfolio": {
-                "BTC": 0,
                 "USDT": 10000
             }
         },
@@ -38,11 +47,12 @@
         "avatar": "matrix-icon.png",
         "complexity": 2,
         "description": "see https://github.com/techfreaque/octobot-lorentzian-classification for more details",
-        "id": "lorentzian_classification_default",
+        "id": "my_lorentzian_classification",
         "imported": true,
-        "name": "Lorentzian Classification Default",
+        "name": "My Lorentzian Classification",
         "origin_url": "https://raw.githubusercontent.com/techfreaque/octobot-lorentzian-classification/main/releases/profile/lorentzian-classification_profile.zip",
         "read_only": false,
-        "risk": 2
+        "risk": 2,
+        "type": "live"
     }
 }

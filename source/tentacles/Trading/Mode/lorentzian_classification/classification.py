@@ -113,17 +113,17 @@ import octobot_commons.enums as enums
 import octobot_trading.modes.script_keywords.context_management as context_management
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
-import tentacles.Trading.Mode.lorentzian_classification.classification_functions.classification_utils as classification_utils
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.classification_functions.classification_utils as classification_utils
 
-import tentacles.Trading.Mode.lorentzian_classification.kernel_functions.kernel as kernel
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.kernel_functions.kernel as kernel
 import tentacles.Trading.Mode.lorentzian_classification.trade_execution as trade_execution
-import tentacles.Trading.Mode.lorentzian_classification.utils as utils
-import tentacles.Trading.Mode.lorentzian_classification.ml_extensions_2.ml_extensions as ml_extensions
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.utils as utils
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.ml_extensions_2.ml_extensions as ml_extensions
 
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.plottings.plots as matrix_plots
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.abstract_producer_base as abstract_producer_base
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.mode_base.producer_base as producer_base
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.plottings.plots as matrix_plots
+import tentacles.Meta.Keywords.basic_tentacles.basic_modes.mode_base.abstract_producer_base as abstract_producer_base
+import tentacles.Meta.Keywords.basic_tentacles.basic_modes.mode_base.producer_base as producer_base
 
 try:
     from tentacles.Evaluator.Util.candles_util import CandlesUtil
@@ -143,6 +143,8 @@ class LorentzianClassificationScript(
         producer_base.MatrixProducerBase.__init__(
             self, channel, config, trading_mode, exchange_manager
         )
+        self.start_long_trades_cache: dict = {}
+        self.start_short_trades_cache: dict = {}
 
     async def evaluate_lorentzian_classification(
         self,
@@ -153,6 +155,9 @@ class LorentzianClassificationScript(
                 self.trading_mode.symbol
             ]
         )
+        await self.init_order_settings(
+            ctx, leverage=self.trading_mode.order_settings.leverage
+        )
         if not this_symbol_settings.trade_on_this_pair:
             return
 
@@ -160,9 +165,6 @@ class LorentzianClassificationScript(
             return
         s_time = basic_utilities.start_measure_time(
             f" Lorentzian Classification {self.trading_mode.symbol} -"
-        )
-        await self.init_order_settings(
-            ctx, leverage=self.trading_mode.order_settings.leverage
         )
         data_source_symbol: str = this_symbol_settings.get_data_source_symbol_name()
         (
@@ -214,7 +216,12 @@ class LorentzianClassificationScript(
         )
         y_train_series: npt.NDArray[
             numpy.bool_
-        ] = classification_utils.get_y_train_series(user_selected_candles)
+        ] = classification_utils.get_y_train_series(
+            candle_closes,
+            candle_highs,
+            candle_lows,
+            self.trading_mode.classification_settings.training_data_settings,
+        )
 
         # cut all historical data to same length
         # for numpy and loop indizies being aligned
@@ -229,11 +236,6 @@ class LorentzianClassificationScript(
             candle_times,
             candles_hlc3,
             user_selected_candles,
-            feature_arrays.f1,
-            feature_arrays.f2,
-            feature_arrays.f3,
-            feature_arrays.f4,
-            feature_arrays.f5,
             alerts_bullish,
             alerts_bearish,
             is_bullishs,
@@ -260,11 +262,6 @@ class LorentzianClassificationScript(
                 candle_times,
                 candles_hlc3,
                 user_selected_candles,
-                feature_arrays.f1,
-                feature_arrays.f2,
-                feature_arrays.f3,
-                feature_arrays.f4,
-                feature_arrays.f5,
                 alerts_bullish,
                 alerts_bearish,
                 is_bullishs,
@@ -279,11 +276,22 @@ class LorentzianClassificationScript(
                 was_bullish_rates,
                 is_bullish_rates,
                 was_bearish_rates,
-            )
+            ),
+            reference_length=feature_arrays.cut_data_to_same_len(),
         )
 
-        cutted_data_length: int = len(candle_closes)
-        max_bars_back_index: int = self._get_max_bars_back_index(cutted_data_length)
+        cutted_data_length: int = feature_arrays.cut_data_to_same_len(
+            reference_length=len(candle_closes)
+        )
+        if (
+            not self.exchange_manager.is_backtesting
+            and self.trading_mode.display_settings.is_plot_recording_mode
+        ):
+            max_bars_back_index: int = (
+                cutted_data_length - 200 if cutted_data_length > 200 else 0
+            )
+        else:
+            max_bars_back_index: int = self._get_max_bars_back_index(cutted_data_length)
 
         # =================================
         # ==== Next Bar Classification ====
@@ -297,8 +305,6 @@ class LorentzianClassificationScript(
         bars_since_red_entry: int = 5  # dont trigger exits on loop start
         bars_since_green_entry: int = 5  # dont trigger exits on loop start
 
-        distances: list = []
-        predictions: list = []
         start_long_trades: list = []
         start_short_trades: list = []
         exit_short_trades: list = []
@@ -317,7 +323,9 @@ class LorentzianClassificationScript(
             (
                 bars_since_green_entry,
                 bars_since_red_entry,
-            ) = self._classify_current_candle(
+            ) = classification_utils.classify_current_candle(
+                order_settings=self.trading_mode.order_settings,
+                classification_settings=self.trading_mode.classification_settings,
                 y_train_series=y_train_series,
                 current_candle_index=candle_index,
                 feature_arrays=feature_arrays,
@@ -332,8 +340,6 @@ class LorentzianClassificationScript(
                 # is_bullish_changes=is_bullish_changes,
                 bars_since_red_entry=bars_since_red_entry,
                 bars_since_green_entry=bars_since_green_entry,
-                distances=distances,
-                predictions=predictions,
                 start_long_trades=start_long_trades,
                 start_short_trades=start_short_trades,
                 exit_short_trades=exit_short_trades,
@@ -407,177 +413,6 @@ class LorentzianClassificationScript(
             s_time,
             f" Lorentzian Classification {self.trading_mode.symbol} - storing plots",
         )
-
-    def _classify_current_candle(
-        self,
-        y_train_series: npt.NDArray[numpy.float64],
-        current_candle_index: int,
-        feature_arrays: utils.FeatureArrays,
-        historical_predictions: list,
-        _filters: utils.Filter,
-        previous_signals: list,
-        is_bullishs: npt.NDArray[numpy.bool_],
-        is_bearishs: npt.NDArray[numpy.bool_],
-        # alerts_bullish: npt.NDArray[numpy.bool_],
-        # alerts_bearish: npt.NDArray[numpy.bool_],
-        # is_bearish_changes: npt.NDArray[numpy.bool_],
-        # is_bullish_changes: npt.NDArray[numpy.bool_],
-        bars_since_red_entry: int,
-        bars_since_green_entry: int,
-        distances: list,
-        predictions: list,
-        start_long_trades: list,
-        start_short_trades: list,
-        exit_short_trades: list,
-        exit_long_trades: list,
-        is_buy_signals: list,
-        is_sell_signals: list,
-    ) -> typing.Tuple[int, int]:
-
-        # =========================
-        # ====  Core ML Logic  ====
-        # =========================
-
-        # Approximate Nearest Neighbors Search with Lorentzian Distance:
-        # A novel variation of the Nearest Neighbors (NN) search algorithm that ensures
-        # a chronologically uniform distribution of neighbors.
-
-        # In a traditional KNN-based approach, we would iterate through the entire
-        # dataset and calculate the distance between the current bar
-        # and every other bar in the dataset and then sort the distances in ascending
-        # order. We would then take the first k bars and use their
-        # labels to determine the label of the current bar.
-
-        # There are several problems with this traditional KNN approach in the context
-        # of real-time calculations involving time series data:
-        # - It is computationally expensive to iterate through the entire dataset and
-        #   calculate the distance between every historical bar and
-        #   the current bar.
-        # - Market time series data is often non-stationary, meaning that the
-        #   statistical properties of the data change slightly over time.
-        # - It is possible that the nearest neighbors are not the most informative ones,
-        #   and the KNN algorithm may return poor results if the
-        #   nearest neighbors are not representative of the majority of the data.
-
-        # Previously, the user @capissimo attempted to address some of these issues in
-        # several of his PineScript-based KNN implementations by:
-        # - Using a modified KNN algorithm based on consecutive furthest neighbors to
-        #   find a set of approximate "nearest" neighbors.
-        # - Using a sliding window approach to only calculate the distance between the
-        #   current bar and the most recent n bars in the dataset.
-
-        # Of these two approaches, the latter is inherently limited by the fact that it
-        # only considers the most recent bars in the overall dataset.
-
-        # The former approach has more potential to leverage historical price action,
-        # but is limited by:
-        # - The possibility of a sudden "max" value throwing off the estimation
-        # - The possibility of selecting a set of approximate neighbors that are not
-        #       representative of the majority of the data by oversampling
-        #       values that are not chronologically distinct enough from one another
-        # - The possibility of selecting too many "far" neighbors,
-        #       which may result in a poor estimation of price action
-
-        # To address these issues, a novel Approximate Nearest Neighbors (ANN)
-        # algorithm is used in this indicator.
-
-        # In the below ANN algorithm:
-        # 1. The algorithm iterates through the dataset in chronological order,
-        #       using the modulo operator to only perform calculations every 4 bars.
-        #       This serves the dual purpose of reducing the computational overhead of
-        #       the algorithm and ensuring a minimum chronological spacing
-        #       between the neighbors of at least 4 bars.
-        # 2. A list of the k-similar neighbors is simultaneously maintained in both a
-        #       predictions array and corresponding distances array.
-        # 3. When the size of the predictions array exceeds the desired number of
-        #       nearest neighbors specified in settings.neighborsCount,
-        #       the algorithm removes the first neighbor from the predictions
-        #       array and the corresponding distance array.
-        # 4. The lastDistance variable is overriden to be a distance in the lower 25% of
-        #       the array. This step helps to boost overall accuracy by ensuring
-        #       subsequent newly added distance values increase at a slower rate.
-        # 5. Lorentzian distance is used as a distance metric in order to minimize the
-        #       effect of outliers and take into account the warping of
-        #       "price-time" due to proximity to significant economic events.
-
-
-        last_distance: float = -1
-        prediction: float = 0
-        for candles_back in self._get_candles_back_start_end_index(
-            current_candle_index
-        ):
-            if self.trading_mode.classification_settings.down_sampler(
-                candles_back,
-                self.trading_mode.classification_settings.only_train_on_every_x_bars,
-            ):
-                lorentzian_distance: float = (
-                    classification_utils.get_lorentzian_distance(
-                        self.trading_mode.feature_engineering_settings.feature_count,
-                        candle_index=current_candle_index,
-                        candles_back_index=candles_back,
-                        feature_arrays=feature_arrays,
-                    )
-                )
-                if lorentzian_distance >= last_distance:
-                    last_distance = lorentzian_distance
-                    predictions.append(y_train_series[candles_back])
-                    distances.append(lorentzian_distance)
-                    if (
-                        len(predictions)
-                        > self.trading_mode.classification_settings.neighbors_count
-                    ):
-                        last_distance = distances[
-                            self.trading_mode.classification_settings.last_distance_neighbors_count
-                        ]
-                        del distances[0]
-                        del predictions[0]
-        prediction: int = sum(predictions)
-        historical_predictions.append(prediction)
-        (
-            bars_since_green_entry,
-            bars_since_red_entry,
-        ) = classification_utils.set_signals_from_prediction(
-            prediction=prediction,
-            _filters=_filters,
-            candle_index=current_candle_index,
-            previous_signals=previous_signals,
-            start_long_trades=start_long_trades,
-            start_short_trades=start_short_trades,
-            is_bullishs=is_bullishs,
-            is_bearishs=is_bearishs,
-            # alerts_bullish=alerts_bullish,
-            # alerts_bearish=alerts_bearish,
-            # is_bearish_changes=is_bearish_changes,
-            # is_bullish_changes=is_bullish_changes,
-            exit_short_trades=exit_short_trades,
-            exit_long_trades=exit_long_trades,
-            bars_since_green_entry=bars_since_green_entry,
-            bars_since_red_entry=bars_since_red_entry,
-            is_buy_signals=is_buy_signals,
-            is_sell_signals=is_sell_signals,
-            exit_type=self.trading_mode.order_settings.exit_type,
-        )
-        return bars_since_green_entry, bars_since_red_entry
-
-    def _get_candles_back_start_end_index(self, current_candle_index: int):
-        size_loop: int = min(
-            self.trading_mode.classification_settings.max_bars_back - 1,
-            current_candle_index,
-        )
-        if self.trading_mode.classification_settings.use_remote_fractals:
-            # classify starting from:
-            #   live mode: first bar
-            #   backtesting:  current bar - live_history_size
-            start_index: int = max(
-                current_candle_index
-                - self.trading_mode.classification_settings.live_history_size,
-                0,
-            )
-            end_index: int = start_index + size_loop
-        else:
-            start_index: int = current_candle_index - size_loop
-            end_index: int = current_candle_index
-        return range(start_index, end_index)
 
     def _get_ma_filters(
         self, candle_closes: npt.NDArray[numpy.float64], data_length: int
@@ -656,8 +491,11 @@ class LorentzianClassificationScript(
         slightly_below_lows: npt.NDArray[numpy.float64] = candle_lows * 0.999
         slightly_above_highs: npt.NDArray[numpy.float64] = candle_highs * 1.001
         # use_own_y_axis: bool = this_symbol_settings.use_custom_pair
+        cache_key_prefix: str = "b-" if self.exchange_manager.is_backtesting else "l-"
+
         await self._handle_full_history_plottings(
             ctx=ctx,
+            cache_key_prefix=cache_key_prefix,
             this_symbol_settings=this_symbol_settings,
             y_train_series=y_train_series,
             _filters=_filters,
@@ -687,6 +525,7 @@ class LorentzianClassificationScript(
         )
         await self._handle_short_history_plottings(
             ctx=ctx,
+            cache_key_prefix=cache_key_prefix,
             use_own_y_axis=this_symbol_settings.use_custom_pair,
             historical_predictions=historical_predictions,
             candle_times=candle_times,
@@ -704,6 +543,7 @@ class LorentzianClassificationScript(
     async def _handle_short_history_plottings(
         self,
         ctx: context_management.Context,
+        cache_key_prefix: str,
         use_own_y_axis: bool,
         historical_predictions: list,
         candle_times: npt.NDArray[numpy.float64],
@@ -742,20 +582,22 @@ class LorentzianClassificationScript(
         )
         await matrix_plots.plot_conditional(
             ctx=ctx,
+            is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
             title="Start Long Trades",
             signals=start_long_trades,
             values=slightly_below_lows,
             times=candle_times,
-            value_key="st-l",
+            value_key=f"{cache_key_prefix}st-l",
             color="green",
         )
         await matrix_plots.plot_conditional(
             ctx=ctx,
+            is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
             title="Start Short Trades",
             signals=start_short_trades,
             values=slightly_above_highs,
             times=candle_times,
-            value_key="st-s",
+            value_key=f"{cache_key_prefix}st-s",
             color="red",
         )
         has_exit_signals = len(exit_short_trades) and len(exit_long_trades)
@@ -777,71 +619,88 @@ class LorentzianClassificationScript(
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="Exit Long Trades",
                 signals=exit_long_trades,
                 values=_slightly_above_highs,
                 times=_candle_times,
-                value_key="ex-l",
+                value_key=f"{cache_key_prefix}ex-l",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="Exit Short Trades",
                 signals=exit_short_trades,
                 values=_slightly_below_lows,
                 times=_candle_times,
-                value_key="ex-s",
+                value_key=f"{cache_key_prefix}ex-s",
             )
         if self.trading_mode.display_settings.show_bar_predictions:
-            await ctx.set_cached_values(
-                values=historical_predictions,
-                cache_keys=candle_times,
-                value_key="historical_predictions",
-            )
             await plotting.plot(
                 ctx,
                 title="Bar Prediction Values",
-                cache_value="historical_predictions",
+                cache_value=f"{cache_key_prefix}historical_predictions",
                 chart="sub-chart",
             )
+            if self.trading_mode.display_settings.is_plot_recording_mode:
+                await ctx.set_cached_value(
+                    value=historical_predictions[-1],
+                    value_key=f"{cache_key_prefix}historical_predictions",
+                )
+            else:
+                await ctx.set_cached_values(
+                    values=historical_predictions,
+                    cache_keys=candle_times,
+                    value_key=f"{cache_key_prefix}historical_predictions",
+                )
 
         if self.trading_mode.display_settings.enable_additional_plots:
             plot_signal_state = True
             if plot_signal_state:
                 await matrix_plots.plot_conditional(
                     ctx=ctx,
+                    is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                     title="is_buy_signals",
                     signals=is_buy_signals,
                     values=[1] * len(is_buy_signals),
                     # values=slightly_below_lows,
                     times=candle_times,
-                    value_key="is_buy_signals",
+                    value_key=f"{cache_key_prefix}is_buy_signals",
                     chart_location="sub-chart",
                 )
                 await matrix_plots.plot_conditional(
                     ctx=ctx,
+                    is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                     title="is_sell_signals",
                     signals=is_sell_signals,
                     values=[-1] * len(is_sell_signals),
                     # values=slightly_above_highs,
                     times=candle_times,
-                    value_key="is_sell_signals",
+                    value_key=f"{cache_key_prefix}is_sell_signals",
                     chart_location="sub-chart",
                 )
                 await plotting.plot(
                     ctx,
                     title="Signal State",
-                    cache_value="previous_signals",
+                    cache_value=f"{cache_key_prefix}previous_signals",
                     chart="sub-chart",
                 )
-                await ctx.set_cached_values(
-                    values=previous_signals,
-                    cache_keys=candle_times,
-                    value_key="previous_signals",
-                )
+                if self.trading_mode.display_settings.is_plot_recording_mode:
+                    await ctx.set_cached_value(
+                        value=previous_signals[-1],
+                        value_key=f"{cache_key_prefix}previous_signals",
+                    )
+                else:
+                    await ctx.set_cached_values(
+                        values=previous_signals,
+                        cache_keys=candle_times,
+                        value_key=f"{cache_key_prefix}previous_signals",
+                    )
 
     async def _handle_full_history_plottings(
         self,
         ctx: context_management.Context,
+        cache_key_prefix: str,
         this_symbol_settings: utils.SymbolSettings,
         y_train_series: npt.NDArray[numpy.int64],
         _filters: utils.Filter,
@@ -883,11 +742,6 @@ class LorentzianClassificationScript(
             candle_times,
             candles_hlc3,
             candles_ohlc4,
-            feature_arrays.f1,
-            feature_arrays.f2,
-            feature_arrays.f3,
-            feature_arrays.f4,
-            feature_arrays.f5,
             alerts_bullish,
             alerts_bearish,
             is_bullishs,
@@ -919,11 +773,6 @@ class LorentzianClassificationScript(
                 candle_times,
                 candles_hlc3,
                 candles_ohlc4,
-                feature_arrays.f1,
-                feature_arrays.f2,
-                feature_arrays.f3,
-                feature_arrays.f4,
-                feature_arrays.f5,
                 alerts_bullish,
                 alerts_bearish,
                 is_bullishs,
@@ -940,36 +789,39 @@ class LorentzianClassificationScript(
                 was_bearish_rates,
                 slightly_below_lows,
                 slightly_above_highs,
-            )
+            ),
+            reference_length=feature_arrays.cut_data_to_same_len(),
         )
-        # TODO handle when custom pair
-        # use_own_y_axis:bool = this_symbol_settings.use_custom_pair
+        feature_arrays.cut_data_to_same_len(reference_length=len(candle_closes))
         if self.trading_mode.filter_settings.plot_volatility_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="Volatility Filter",
                 signals=_filters.volatility,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="volatility",
+                value_key=f"{cache_key_prefix}volatility",
             )
         if self.trading_mode.filter_settings.plot_regime_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="Regime filter",
                 signals=_filters.regime,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="regime",
+                value_key=f"{cache_key_prefix}regime",
             )
         if self.trading_mode.filter_settings.plot_adx_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="ADX filter",
                 signals=_filters.adx,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="adx",
+                value_key=f"{cache_key_prefix}adx",
             )
         if (
             self.trading_mode.filter_settings.plot_adx_filter
@@ -978,48 +830,53 @@ class LorentzianClassificationScript(
         ):
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="both side filter",
                 signals=_filters.filter_all,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="filter_all",
+                value_key=f"{cache_key_prefix}filter_all",
             )
 
         if self.trading_mode.filter_settings.plot_ema_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_ema_uptrend",
                 signals=_filters.is_ema_uptrend,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="is_ema_uptrend",
+                value_key=f"{cache_key_prefix}is_ema_uptrend",
             )
         if self.trading_mode.filter_settings.plot_sma_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_sma_uptrend",
                 signals=_filters.is_sma_uptrend,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="is_sma_uptrend",
+                value_key=f"{cache_key_prefix}is_sma_uptrend",
             )
         if self.trading_mode.filter_settings.plot_ema_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_ema_downtrend",
                 signals=_filters.is_ema_downtrend,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="is_ema_downtrend",
+                value_key=f"{cache_key_prefix}is_ema_downtrend",
             )
         if self.trading_mode.filter_settings.plot_sma_filter:
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_sma_downtrend",
                 signals=_filters.is_sma_downtrend,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="is_sma_downtrend",
+                value_key=f"{cache_key_prefix}is_sma_downtrend",
             )
 
         if (
@@ -1028,201 +885,200 @@ class LorentzianClassificationScript(
         ):
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is uptrend",
                 signals=_filters.is_uptrend,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="uptrend",
+                value_key=f"{cache_key_prefix}uptrend",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is downtrend",
                 signals=_filters.is_downtrend,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="downtrend",
+                value_key=f"{cache_key_prefix}downtrend",
             )
         additional_values_by_key = {}
         if this_symbol_settings.use_custom_pair:
-            additional_values_by_key["clo"] = candle_closes
+            additional_values_by_key[f"{cache_key_prefix}clo"] = candle_closes
             await plotting.plot(
                 ctx,
                 title="Candle CLoses " + this_symbol_settings.this_target_symbol,
-                cache_value="clo",
+                cache_value=f"{cache_key_prefix}clo",
                 chart="main-chart",
                 own_yaxis=True,
             )
 
         if self.trading_mode.feature_engineering_settings.plot_features:
-            additional_values_by_key["f1"] = feature_arrays.f1
-            additional_values_by_key["f2"] = feature_arrays.f2
-            await plotting.plot(
-                ctx,
-                title="Feature 1",
-                cache_value="f1",
-                chart="sub-chart",
-            )
-            await plotting.plot(
-                ctx,
-                title="Feature 2",
-                cache_value="f2",
-                chart="sub-chart",
-            )
-            if feature_arrays.f3 is not None:
-                additional_values_by_key["f3"] = feature_arrays.f3
+            for feature_id, feature_setting in enumerate(
+                self.trading_mode.feature_engineering_settings.features_settings
+            ):
+                additional_values_by_key[
+                    f"{cache_key_prefix}f{feature_id}"
+                ] = feature_arrays.feature_arrays[feature_id]
                 await plotting.plot(
                     ctx,
-                    title="Feature 3",
-                    cache_value="f3",
-                    chart="sub-chart",
-                )
-            if feature_arrays.f4 is not None:
-                additional_values_by_key["f4"] = feature_arrays.f4
-                await plotting.plot(
-                    ctx,
-                    title="Feature 4",
-                    cache_value="f4",
-                    chart="sub-chart",
-                )
-            if feature_arrays.f5 is not None:
-                additional_values_by_key["f5"] = feature_arrays.f5
-                await plotting.plot(
-                    ctx,
-                    title="Feature 5",
-                    cache_value="f5",
+                    title=f"Feature {feature_id} - {feature_setting.indicator_name} "
+                    f"(a: {feature_setting.param_a}, b: {feature_setting.param_b}",
+                    cache_value=f"{cache_key_prefix}f{feature_id}",
                     chart="sub-chart",
                 )
         if self.trading_mode.kernel_settings.show_kernel_estimate:
-            additional_values_by_key["k_esti"] = kernel_estimate
+            additional_values_by_key[f"{cache_key_prefix}k_esti"] = kernel_estimate
             await plotting.plot(
                 ctx,
                 title="Kernel estimate",
-                cache_value="k_esti",
+                cache_value=f"{cache_key_prefix}k_esti",
                 chart="main-chart",
             )
         if self.trading_mode.display_settings.enable_additional_plots:
-            additional_values_by_key["yhat2"] = yhat2
-            additional_values_by_key["yt"] = y_train_series
+            additional_values_by_key[f"{cache_key_prefix}yhat2"] = yhat2
+            additional_values_by_key[f"{cache_key_prefix}yt"] = y_train_series
             await plotting.plot(
                 ctx,
                 title="yhat2",
-                cache_value="yhat2",
+                cache_value=f"{cache_key_prefix}yhat2",
                 chart="main-chart",
             )
 
             await plotting.plot(
                 ctx,
                 title="y_train_series",
-                cache_value="yt",
+                cache_value=f"{cache_key_prefix}yt",
                 chart="sub-chart",
                 own_yaxis=True,
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bearish_rates",
                 signals=is_bearish_rates,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="is_bearish_rates",
+                value_key=f"{cache_key_prefix}is_bearish_rates",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="was_bullish_rates",
                 signals=was_bullish_rates,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="was_bullish_rates",
+                value_key=f"{cache_key_prefix}was_bullish_rates",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bullish_rates",
                 signals=is_bullish_rates,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="is_bullish_rates",
+                value_key=f"{cache_key_prefix}is_bullish_rates",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="was_bearish_rates",
                 signals=was_bearish_rates,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="was_bearish_rates",
+                value_key=f"{cache_key_prefix}was_bearish_rates",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bullish_cross_alerts",
                 signals=is_bullish_cross_alerts,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="is_bullish_cross_alerts",
+                value_key=f"{cache_key_prefix}is_bullish_cross_alerts",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bearish_cross_alerts",
                 signals=is_bearish_cross_alerts,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="is_bearish_cross_alerts",
+                value_key=f"{cache_key_prefix}is_bearish_cross_alerts",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="alerts_bullish",
                 signals=alerts_bullish,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="alerts_bullish",
+                value_key=f"{cache_key_prefix}alerts_bullish",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="alerts_bearish",
                 signals=alerts_bearish,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="alerts_bearish",
+                value_key=f"{cache_key_prefix}alerts_bearish",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bullishs",
                 signals=is_bullishs,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="is_bullishs",
+                value_key=f"{cache_key_prefix}is_bullishs",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bearishs",
                 signals=is_bearishs,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="is_bearishs",
+                value_key=f"{cache_key_prefix}is_bearishs",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bearish_changes",
                 signals=is_bearish_changes,
                 values=slightly_above_highs,
                 times=candle_times,
-                value_key="is_bearish_changes",
+                value_key=f"{cache_key_prefix}is_bearish_changes",
             )
             await matrix_plots.plot_conditional(
                 ctx=ctx,
+                is_recording_mode=self.trading_mode.display_settings.is_plot_recording_mode,
                 title="is_bullish_changes",
                 signals=is_bullish_changes,
                 values=slightly_below_lows,
                 times=candle_times,
-                value_key="is_bullish_changes",
+                value_key=f"{cache_key_prefix}is_bullish_changes",
             )
         if additional_values_by_key != {}:
-            first_key = next(iter(additional_values_by_key))
-            first_values = additional_values_by_key[first_key]
-            del additional_values_by_key[first_key]
-            await ctx.set_cached_values(
-                values=first_values,
-                cache_keys=candle_times,
-                value_key=first_key,
-                additional_values_by_key=additional_values_by_key,
-            )
+            if (
+                not self.exchange_manager.is_backtesting
+                and self.trading_mode.display_settings.is_plot_recording_mode
+            ):
+                for key, value in additional_values_by_key.items():
+                    await ctx.set_cached_value(
+                        value=value[-1],
+                        value_key=key,
+                    )
+            else:
+                first_key = next(iter(additional_values_by_key))
+                first_values = additional_values_by_key[first_key]
+                del additional_values_by_key[first_key]
+                await ctx.set_cached_values(
+                    values=first_values,
+                    cache_keys=candle_times,
+                    value_key=first_key,
+                    additional_values_by_key=additional_values_by_key,
+                )
 
     def _get_all_filters(
         self,
@@ -1233,7 +1089,6 @@ class LorentzianClassificationScript(
         candle_lows: npt.NDArray[numpy.float64],
         user_selected_candles: npt.NDArray[numpy.float64],
     ) -> utils.Filter:
-
         # Filter object for filtering the ML predictions
         (
             is_ema_uptrend,
@@ -1281,54 +1136,22 @@ class LorentzianClassificationScript(
         candle_lows: npt.NDArray[numpy.float64],
         candles_hlc3: npt.NDArray[numpy.float64],
     ) -> utils.FeatureArrays:
-        return utils.FeatureArrays(
-            # TODO use list and loop instead
-            f1=utils.series_from(
-                self.trading_mode.feature_engineering_settings.f1_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.trading_mode.feature_engineering_settings.f1_paramA,
-                self.trading_mode.feature_engineering_settings.f1_paramB,
-            ),
-            f2=utils.series_from(
-                self.trading_mode.feature_engineering_settings.f2_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.trading_mode.feature_engineering_settings.f2_paramA,
-                self.trading_mode.feature_engineering_settings.f2_paramB,
-            ),
-            f3=utils.series_from(
-                self.trading_mode.feature_engineering_settings.f3_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.trading_mode.feature_engineering_settings.f3_paramA,
-                self.trading_mode.feature_engineering_settings.f3_paramB,
-            ),
-            f4=utils.series_from(
-                self.trading_mode.feature_engineering_settings.f4_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.trading_mode.feature_engineering_settings.f4_paramA,
-                self.trading_mode.feature_engineering_settings.f4_paramB,
-            ),
-            f5=utils.series_from(
-                self.trading_mode.feature_engineering_settings.f5_string,
-                candle_closes,
-                candle_highs,
-                candle_lows,
-                candles_hlc3,
-                self.trading_mode.feature_engineering_settings.f5_paramA,
-                self.trading_mode.feature_engineering_settings.f5_paramB,
-            ),
-        )
+        feature_arrays: utils.FeatureArrays = utils.FeatureArrays()
+        for (
+            feature_settings
+        ) in self.trading_mode.feature_engineering_settings.features_settings:
+            feature_arrays.add_feature_array(
+                feature_array=utils.series_from(
+                    feature_settings.indicator_name,
+                    candle_closes,
+                    candle_highs,
+                    candle_lows,
+                    candles_hlc3,
+                    feature_settings.param_a,
+                    feature_settings.param_b,
+                )
+            )
+        return feature_arrays
 
     async def _get_candle_data(
         self,

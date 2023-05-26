@@ -3,8 +3,8 @@ from tulipy import InvalidOptionError
 import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.basic_modes.scripted_trading_mode.use_scripted_trading_mode as use_scripted_trading_mode
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
+import tentacles.Meta.Keywords.basic_tentacles.basic_modes.scripted_trading_mode.use_scripted_trading_mode as use_scripted_trading_mode
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 
 import tentacles.Trading.Mode.lorentzian_classification.classification as classification
 import tentacles.Trading.Mode.lorentzian_classification.settings as settings
@@ -50,9 +50,11 @@ class LorentzianClassificationProducer(classification.LorentzianClassificationSc
                     ctx=ctx,
                 )
             except InvalidOptionError as error:
-                ctx.logger.exception(error, True,
+                ctx.logger.exception(
+                    error,
+                    True,
                     "Failed generate Filters or Features. "
                     "Most likely due to not enough available historical bars. "
                     "Check the historical bars in the TimeFrameStrategyEvaluator "
-                    "settings"
+                    "settings",
                 )

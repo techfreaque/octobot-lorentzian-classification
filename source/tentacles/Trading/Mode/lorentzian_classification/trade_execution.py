@@ -7,18 +7,21 @@ import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords.context_management as context_management
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order as market_order
 import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_settings as backtesting_settings
-import tentacles.Meta.Keywords.matrix_library.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
-import tentacles.Trading.Mode.lorentzian_classification.utils as utils
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.utils as utils
+import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.analysis_enums as analysis_enums
+import tentacles.Trading.Mode.lorentzian_classification.settings as lorentzian_settings
 
 try:
-    import tentacles.Meta.Keywords.matrix_library.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+    import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
 except (ImportError, ModuleNotFoundError):
     activate_managed_order = None
 
 
 class LorentzianTradeExecution:
-    start_long_trades_cache: dict = None
-    start_short_trades_cache: dict = None
+    trading_mode = None
+    start_long_trades_cache: dict = {}
+    start_short_trades_cache: dict = {}
     exit_long_trades_cache: dict = None
     exit_short_trades_cache: dict = None
 
@@ -53,9 +56,9 @@ class LorentzianTradeExecution:
         has_exit_signals = len(exit_short_trades) and len(exit_long_trades)
         if has_exit_signals:
             if exit_short_trades[-1]:
-                await exit_short_trade(order_settings=order_settings)
+                await exit_short_trade(ctx=ctx)
             if exit_long_trades[-1]:
-                await exit_long_trade(order_settings=order_settings)
+                await exit_long_trade(ctx=ctx)
         basic_utilities.end_measure_time(
             s_time,
             f" Lorentzian Classification {symbol} - " "trading eventual singals",
@@ -65,17 +68,21 @@ class LorentzianTradeExecution:
         self, ctx: context_management.Context
     ) -> bool:
         if ctx.exchange_manager.is_backtesting:
-            if self.start_long_trades_cache is not None:
+            if ctx.time_frame in self.start_long_trades_cache:
                 trigger_cache_timestamp = int(ctx.trigger_cache_timestamp)
                 try:
-                    if self.start_short_trades_cache[trigger_cache_timestamp]:
+                    if self.start_short_trades_cache[ctx.time_frame][
+                        trigger_cache_timestamp
+                    ]:
                         await enter_short_trade(
                             mode_producer=self,
                             ctx=ctx,
                             order_settings=self.trading_mode.order_settings,
                             managend_orders_short_settings=self.managend_orders_short_settings,
                         )
-                    elif self.start_long_trades_cache[trigger_cache_timestamp]:
+                    elif self.start_long_trades_cache[ctx.time_frame][
+                        trigger_cache_timestamp
+                    ]:
                         await enter_long_trade(
                             mode_producer=self,
                             ctx=ctx,
@@ -94,7 +101,9 @@ class LorentzianTradeExecution:
                         await exit_long_trade(ctx)
                     return True
                 except KeyError as error:
-                    print(f"No cached strategy signal for this candle - error: {error}")
+                    ctx.logger.debug(
+                        f"No cached strategy signal for this candle - error: {error}"
+                    )
                     return True
         return False
 
@@ -140,16 +149,20 @@ class LorentzianTradeExecution:
                 )
             )
         candle_times_to_whitelist: list = []
-        self.start_short_trades_cache: dict = {}
-        self.start_long_trades_cache: dict = {}
+        self.start_short_trades_cache[ctx.time_frame] = {}
+        self.start_long_trades_cache[ctx.time_frame] = {}
         if has_exit_signals:
             self.exit_long_trades_cache: dict = {}
             self.exit_short_trades_cache: dict = {}
         trades_count: int = 0
         for index, candle_time in enumerate(candle_times):
             candle_time: int = int(candle_time)
-            self.start_short_trades_cache[candle_time] = start_short_trades[index]
-            self.start_long_trades_cache[candle_time] = start_long_trades[index]
+            self.start_short_trades_cache[ctx.time_frame][
+                candle_time
+            ] = start_short_trades[index]
+            self.start_long_trades_cache[ctx.time_frame][
+                candle_time
+            ] = start_long_trades[index]
             if has_exit_signals:
                 self.exit_long_trades_cache[candle_time] = exit_long_trades[index]
                 self.exit_short_trades_cache[candle_time] = exit_short_trades[index]
@@ -166,6 +179,7 @@ class LorentzianTradeExecution:
                 )
                 candle_times_to_whitelist.append(candle_time)
                 candle_times_to_whitelist.append(open_time)
+        # if len(self.time_frame_filter) <= 1:
         backtesting_settings.register_backtesting_timestamp_whitelist(
             ctx, list(set(candle_times_to_whitelist))
         )
@@ -187,17 +201,23 @@ class LorentzianTradeExecution:
                     None,
                     title="Long Trade Settings",
                     editor_options={
-                        "grid_columns": 12,
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                        analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "RiseOutlined",
+                        enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                        enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                     },
-                    other_schema_values={"display_as_tab": True},
+                    # other_schema_values={
+                    #     # analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
+                    # },
+                    parent_input_name=lorentzian_settings.ORDER_SETTINGS_NAME,
                 )
                 self.managend_orders_long_settings = (
-                        await activate_managed_order.activate_managed_orders(
-                            self,
-                            parent_input_name=long_settings_name,
-                            name_prefix="long",
-                        )
+                    await activate_managed_order.activate_managed_orders(
+                        self,
+                        parent_input_name=long_settings_name,
+                        name_prefix="long",
                     )
+                )
             if self.trading_mode.order_settings.enable_short_orders:
                 short_settings_name = "short_order_settings"
                 await basic_keywords.user_input(
@@ -207,9 +227,15 @@ class LorentzianTradeExecution:
                     None,
                     title="Short Trade Settings",
                     editor_options={
-                        "grid_columns": 12,
+                        enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+                        analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "FallOutlined",
+                        enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
+                        enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                     },
-                    other_schema_values={"display_as_tab": True},
+                    other_schema_values={
+                        # analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
+                    },
+                    parent_input_name=lorentzian_settings.ORDER_SETTINGS_NAME,
                 )
                 self.managend_orders_short_settings = (
                     await activate_managed_order.activate_managed_orders(
@@ -228,13 +254,13 @@ async def enter_short_trade(
     order_settings: utils.LorentzianOrderSettings,
     managend_orders_short_settings,
 ):
-    inverse_signals = (
+    symbol_settings: utils.SymbolSettings = (
         mode_producer.trading_mode.data_source_settings.symbol_settings_by_symbols[
             ctx.symbol
-        ].inverse_signals
+        ]
     )
-    if order_settings.enable_short_orders:
-        if inverse_signals:
+    if symbol_settings.enable_short_orders:
+        if symbol_settings.inverse_signals:
             trading_side = "long"
             target_position = f"{order_settings.short_order_volume}"
         else:
@@ -251,8 +277,8 @@ async def enter_short_trade(
                 ctx,
                 target_position=target_position,
             )
-    elif order_settings.enable_long_orders:
-        if inverse_signals:
+    elif symbol_settings.enable_long_orders:
+        if symbol_settings.inverse_signals:
             await exit_short_trade(ctx=ctx)
         else:
             await exit_long_trade(ctx=ctx)
@@ -264,14 +290,14 @@ async def enter_long_trade(
     order_settings: utils.LorentzianOrderSettings,
     managend_orders_long_settings,
 ):
-    inverse_signals = (
+    symbol_settings: utils.SymbolSettings = (
         mode_producer.trading_mode.data_source_settings.symbol_settings_by_symbols[
             ctx.symbol
-        ].inverse_signals
+        ]
     )
 
-    if order_settings.enable_long_orders:
-        if inverse_signals:
+    if symbol_settings.enable_long_orders:
+        if symbol_settings.inverse_signals:
             trading_side = "short"
             target_position = f"-{order_settings.long_order_volume}"
         else:
@@ -288,8 +314,8 @@ async def enter_long_trade(
                 ctx,
                 target_position=target_position,
             )
-    elif order_settings.enable_short_orders:
-        if inverse_signals:
+    elif symbol_settings.enable_short_orders:
+        if symbol_settings.inverse_signals:
             await exit_long_trade(ctx=ctx)
         else:
             await exit_short_trade(ctx=ctx)

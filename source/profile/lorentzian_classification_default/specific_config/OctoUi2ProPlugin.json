@@ -1,0 +1,472 @@
+{
+    "optimizer_inputs": {
+        "filters_settings": [],
+        "user_inputs": {
+            "LorentzianClassificationMode_------_data_source_settings-candle_source": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_data_source_settings",
+                "type": "options",
+                "user_input": "candle_source",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_BTC/USDT-enable_custom_source_BTC/USDT": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_BTC/USDT",
+                "type": "boolean",
+                "user_input": "enable_custom_source_BTC/USDT",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_BTC/USDT-inverse_signals_BTC/USDT": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_BTC/USDT",
+                "type": "boolean",
+                "user_input": "inverse_signals_BTC/USDT",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_BTC/USDT-trade_on_BTC/USDT": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_BTC/USDT",
+                "type": "boolean",
+                "user_input": "trade_on_BTC/USDT",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_ETH/USDT-enable_custom_source_ETH/USDT": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_ETH/USDT",
+                "type": "boolean",
+                "user_input": "enable_custom_source_ETH/USDT",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_ETH/USDT-inverse_signals_ETH/USDT": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_ETH/USDT",
+                "type": "boolean",
+                "user_input": "inverse_signals_ETH/USDT",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_ETH/USDT-trade_on_ETH/USDT": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_data_source_settings_------_data_source_settings_ETH/USDT",
+                "type": "boolean",
+                "user_input": "trade_on_ETH/USDT",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_display_settings-enable_additional_plots": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_display_settings",
+                "type": "boolean",
+                "user_input": "enable_additional_plots",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_display_settings-plotting_mode": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_display_settings",
+                "type": "options",
+                "user_input": "plotting_mode",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_display_settings-show_bar_predictions": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_display_settings",
+                "type": "boolean",
+                "user_input": "show_bar_predictions",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings-feature_count": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings",
+                "type": "number",
+                "user_input": "feature_count",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings-plot_features": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings",
+                "type": "boolean",
+                "user_input": "plot_features",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_1_settings-f1_paramA": {
+                "enabled": true,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_1_settings",
+                "type": "number",
+                "user_input": "f1_paramA",
+                "value": {
+                    "max": 50,
+                    "min": 15,
+                    "step": 5
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_1_settings-f1_paramB": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_1_settings",
+                "type": "number",
+                "user_input": "f1_paramB",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_1_settings-f1_string": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_1_settings",
+                "type": "options",
+                "user_input": "f1_string",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_2_settings-f2_paramA": {
+                "enabled": true,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_2_settings",
+                "type": "number",
+                "user_input": "f2_paramA",
+                "value": {
+                    "max": 50,
+                    "min": 15,
+                    "step": 5
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_2_settings-f2_paramB": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_2_settings",
+                "type": "number",
+                "user_input": "f2_paramB",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_2_settings-f2_string": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_2_settings",
+                "type": "options",
+                "user_input": "f2_string",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_3_settings-f3_paramA": {
+                "enabled": true,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_3_settings",
+                "type": "number",
+                "user_input": "f3_paramA",
+                "value": {
+                    "max": 50,
+                    "min": 15,
+                    "step": 5
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_3_settings-f3_paramB": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_3_settings",
+                "type": "number",
+                "user_input": "f3_paramB",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_3_settings-f3_string": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_3_settings",
+                "type": "options",
+                "user_input": "f3_string",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_4_settings-f4_paramA": {
+                "enabled": true,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_4_settings",
+                "type": "number",
+                "user_input": "f4_paramA",
+                "value": {
+                    "max": 50,
+                    "min": 15,
+                    "step": 5
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_4_settings-f4_paramB": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_4_settings",
+                "type": "number",
+                "user_input": "f4_paramB",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_4_settings-f4_string": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_4_settings",
+                "type": "options",
+                "user_input": "f4_string",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_5_settings-f5_paramA": {
+                "enabled": true,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_5_settings",
+                "type": "number",
+                "user_input": "f5_paramA",
+                "value": {
+                    "max": 20,
+                    "min": 7,
+                    "step": 3
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_5_settings-f5_paramB": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_5_settings",
+                "type": "number",
+                "user_input": "f5_paramB",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_5_settings-f5_string": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_feature_engineering_settings_------_feature_5_settings",
+                "type": "options",
+                "user_input": "f5_string",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_adx_filter_settings-use_adx_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_adx_filter_settings",
+                "type": "boolean",
+                "user_input": "use_adx_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_ema_filter_settings-use_ema_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_ema_filter_settings",
+                "type": "boolean",
+                "user_input": "use_ema_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_regime_filter_settings-plot_regime_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_regime_filter_settings",
+                "type": "boolean",
+                "user_input": "plot_regime_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_regime_filter_settings-regime_threshold": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_regime_filter_settings",
+                "type": "number",
+                "user_input": "regime_threshold",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_regime_filter_settings-use_regime_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_regime_filter_settings",
+                "type": "boolean",
+                "user_input": "use_regime_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_sma_filter_settings-use_sma_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_sma_filter_settings",
+                "type": "boolean",
+                "user_input": "use_sma_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_volatility_filter_settings-plot_volatility_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_volatility_filter_settings",
+                "type": "boolean",
+                "user_input": "plot_volatility_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_filter_settings_------_volatility_filter_settings-use_volatility_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_filter_settings_------_volatility_filter_settings",
+                "type": "boolean",
+                "user_input": "use_volatility_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_general_settings-down_sampler": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_general_settings",
+                "type": "options",
+                "user_input": "down_sampler",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_general_settings-max_bars_back": {
+                "enabled": true,
+                "tentacle": "LorentzianClassificationMode_------_general_settings",
+                "type": "number",
+                "user_input": "max_bars_back",
+                "value": {
+                    "max": 4900,
+                    "min": 4900,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_general_settings-neighbors_count": {
+                "enabled": true,
+                "tentacle": "LorentzianClassificationMode_------_general_settings",
+                "type": "number",
+                "user_input": "neighbors_count",
+                "value": {
+                    "max": 16,
+                    "min": 16,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_general_settings-only_train_on_x_bars": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_general_settings",
+                "type": "number",
+                "user_input": "only_train_on_x_bars",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_general_settings-use_remote_fractals": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_general_settings",
+                "type": "boolean",
+                "user_input": "use_remote_fractals",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_kernel_settings-lag": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_kernel_settings",
+                "type": "number",
+                "user_input": "lag",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_kernel_settings-lookback_window": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_kernel_settings",
+                "type": "number",
+                "user_input": "lookback_window",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_kernel_settings-regression_level": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_kernel_settings",
+                "type": "number",
+                "user_input": "regression_level",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_kernel_settings-relative_weighting": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_kernel_settings",
+                "type": "number",
+                "user_input": "relative_weighting",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "LorentzianClassificationMode_------_kernel_settings-show_kernel_estimate": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_kernel_settings",
+                "type": "boolean",
+                "user_input": "show_kernel_estimate",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_kernel_settings-use_kernel_filter": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_kernel_settings",
+                "type": "boolean",
+                "user_input": "use_kernel_filter",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_kernel_settings-use_kernel_smoothing": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_kernel_settings",
+                "type": "boolean",
+                "user_input": "use_kernel_smoothing",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_order_settings-enable_long_orders": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_order_settings",
+                "type": "boolean",
+                "user_input": "enable_long_orders",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_order_settings-enable_short_orders": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_order_settings",
+                "type": "boolean",
+                "user_input": "enable_short_orders",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_order_settings-exit_type": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_order_settings",
+                "type": "options",
+                "user_input": "exit_type",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_order_settings-long_order_size": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_order_settings",
+                "type": "options",
+                "user_input": "long_order_size",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_order_settings-order_type": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_order_settings",
+                "type": "options",
+                "user_input": "order_type",
+                "value": []
+            },
+            "LorentzianClassificationMode_------_order_settings-short_order_size": {
+                "enabled": false,
+                "tentacle": "LorentzianClassificationMode_------_order_settings",
+                "type": "options",
+                "user_input": "short_order_size",
+                "value": []
+            },
+            "TimeFrameStrategyEvaluator-required_candles_count": {
+                "enabled": false,
+                "tentacle": "TimeFrameStrategyEvaluator",
+                "type": "number",
+                "user_input": "required_candles_count",
+                "value": {
+                    "max": 0,
+                    "min": 0,
+                    "step": 1
+                }
+            },
+            "TimeFrameStrategyEvaluator-required_time_frames": {
+                "enabled": false,
+                "tentacle": "TimeFrameStrategyEvaluator",
+                "type": "multiple-options",
+                "user_input": "required_time_frames",
+                "value": []
+            }
+        }
+    }
+}

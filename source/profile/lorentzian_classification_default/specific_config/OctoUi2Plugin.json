@@ -22,6 +22,15 @@
                                 "component": "Footer",
                                 "rightContent": [
                                     {
+                                        "component": "OptimizerProgress"
+                                    },
+                                    {
+                                        "component": "DataCollectorProgress"
+                                    },
+                                    {
+                                        "component": "BacktestingProgress"
+                                    },
+                                    {
                                         "component": "RefreshBotData"
                                     },
                                     {
@@ -49,6 +58,9 @@
                                                         "component": "Tab",
                                                         "content": [
                                                             {
+                                                                "component": "ColorModeSwitch"
+                                                            },
+                                                            {
                                                                 "component": "UIConfig",
                                                                 "configKeys": [
                                                                     "display_settings"
@@ -58,11 +70,7 @@
                                                         "dontScroll": false,
                                                         "faIcon": "",
                                                         "title": "Display Settings",
-                                                        "toolBarContent": [
-                                                            {
-                                                                "component": "ColorModeSwitch"
-                                                            }
-                                                        ]
+                                                        "toolBarContent": []
                                                     },
                                                     {
                                                         "antIcon": "noIcon",
@@ -82,29 +90,7 @@
                                                         "component": "Tab",
                                                         "content": [
                                                             {
-                                                                "component": "ResetUiConfigButton"
-                                                            },
-                                                            {
-                                                                "component": "ResetTentaclesPlotCacheButton"
-                                                            },
-                                                            {
-                                                                "component": "ResetTentaclesConfigsButton"
-                                                            },
-                                                            {
-                                                                "component": "ResetHistoryStorageButton",
-                                                                "storageName": "portfolioHistory"
-                                                            },
-                                                            {
-                                                                "component": "ResetHistoryStorageButton",
-                                                                "storageName": "ordersHistory"
-                                                            },
-                                                            {
-                                                                "component": "ResetHistoryStorageButton",
-                                                                "storageName": "tradesHistory"
-                                                            },
-                                                            {
-                                                                "component": "ResetHistoryStorageButton",
-                                                                "storageName": "transactionsHistory"
+                                                                "component": "ResetConfigs"
                                                             }
                                                         ],
                                                         "dontScroll": false,
@@ -145,16 +131,44 @@
                                 "component": "Header",
                                 "leftContent": [
                                     {
-                                        "component": "Logo"
-                                    },
-                                    {
-                                        "component": "PairsSelector"
+                                        "component": "PairsSelector",
+                                        "content": [
+                                            {
+                                                "component": "ScrollableTabs",
+                                                "rightContent": [],
+                                                "tabs": [
+                                                    {
+                                                        "antIcon": "DollarOutlined",
+                                                        "component": "Tab",
+                                                        "content": [
+                                                            {
+                                                                "component": "PairsTable"
+                                                            }
+                                                        ],
+                                                        "dontScroll": true,
+                                                        "faIcon": "",
+                                                        "title": "Symbols",
+                                                        "toolBarContent": []
+                                                    },
+                                                    {
+                                                        "antIcon": "BankOutlined",
+                                                        "component": "Tab",
+                                                        "content": [
+                                                            {
+                                                                "component": "ExchangeSelector"
+                                                            }
+                                                        ],
+                                                        "dontScroll": true,
+                                                        "faIcon": "",
+                                                        "title": "Exchanges",
+                                                        "toolBarContent": []
+                                                    }
+                                                ]
+                                            }
+                                        ]
                                     },
                                     {
                                         "component": "TimeFrameSelector"
-                                    },
-                                    {
-                                        "component": "ExchangeSelector"
                                     }
                                 ],
                                 "rightContent": [
@@ -203,21 +217,6 @@
                                                 "component": "ToggleActivateRealTimeStrategy"
                                             }
                                         ]
-                                    },
-                                    {
-                                        "antIcon": "FileSearchOutlined",
-                                        "component": "Tab",
-                                        "content": [
-                                            {
-                                                "component": "TentaclesConfig",
-                                                "content": [],
-                                                "tentacleNames": "RunAnalysisModePlugin"
-                                            }
-                                        ],
-                                        "dontScroll": false,
-                                        "faIcon": "noIcon",
-                                        "title": "Run Analysis",
-                                        "toolBarContent": []
                                     },
                                     {
                                         "antIcon": "LineChartOutlined",
@@ -344,6 +343,7 @@
                                                                 ]
                                                             }
                                                         ],
+                                                        "dontScroll": false,
                                                         "faIcon": "noIcon",
                                                         "label": "Backtesting Settings",
                                                         "noPadding": false
@@ -357,6 +357,7 @@
                                                                 "component": "BacktestingRunDataTable"
                                                             }
                                                         ],
+                                                        "dontScroll": true,
                                                         "faIcon": "noIcon",
                                                         "label": "Backtesting Runs",
                                                         "noPadding": true
@@ -364,7 +365,7 @@
                                                 ]
                                             }
                                         ],
-                                        "dontScroll": false,
+                                        "dontScroll": true,
                                         "faIcon": "noIcon",
                                         "title": "Backtesting",
                                         "toolBarContent": [
@@ -396,6 +397,7 @@
                                                                 ]
                                                             }
                                                         ],
+                                                        "dontScroll": false,
                                                         "faIcon": "noIcon",
                                                         "label": "Optimizer Settings",
                                                         "noPadding": false
@@ -409,6 +411,7 @@
                                                                 "component": "OptimizerConfigForm"
                                                             }
                                                         ],
+                                                        "dontScroll": false,
                                                         "faIcon": "noIcon",
                                                         "label": "Run Config",
                                                         "noPadding": false
@@ -422,14 +425,29 @@
                                                                 "component": "OptimizerQueueTable"
                                                             }
                                                         ],
+                                                        "dontScroll": false,
                                                         "faIcon": "",
                                                         "label": "Optimizer Queue",
+                                                        "noPadding": true
+                                                    },
+                                                    {
+                                                        "antIcon": "UnorderedListOutlined",
+                                                        "children": [],
+                                                        "component": "SidebarMenuItem",
+                                                        "content": [
+                                                            {
+                                                                "component": "BacktestingRunDataTable"
+                                                            }
+                                                        ],
+                                                        "dontScroll": true,
+                                                        "faIcon": "noIcon",
+                                                        "label": "Backtesting Runs",
                                                         "noPadding": true
                                                     }
                                                 ]
                                             }
                                         ],
-                                        "dontScroll": false,
+                                        "dontScroll": true,
                                         "faIcon": "noIcon",
                                         "title": "Optimizer",
                                         "toolBarContent": [
@@ -456,13 +474,20 @@
                         "minHeights": "0, 50",
                         "upperContent": [
                             {
-                                "component": "ChartTablePieCombo"
+                                "component": "ChartTablePieCombo",
+                                "settingsContent": [
+                                    {
+                                        "component": "TentaclesConfig",
+                                        "content": [],
+                                        "tentacleNames": "RunAnalysisModePlugin"
+                                    }
+                                ]
                             }
                         ]
                     }
                 ],
                 "path": "/",
-                "title": "O UI"
+                "title": "Strategy Designer"
             }
         ]
     },
@@ -477,7 +502,7 @@
         ],
         "graphs": {
             "display_unified_tooltip": true,
-            "display_use_log_scale": false,
+            "display_use_log_scale": true,
             "max_candles_before_line_display": 10000,
             "max_candles_line_sources": [
                 "high",
@@ -486,7 +511,7 @@
         }
     },
     "optimization_campaign": {
-        "name": "1default_campaign"
+        "name": "default_campaign"
     },
     "optimizer_campaigns_to_load": {
         "default_campaign": true
@@ -504,6 +529,6 @@
         "notify_when_complete": true,
         "optimizer_id": 1,
         "queue_size": 1000,
-        "start_timestamp": null
+        "start_timestamp": 1483228800000
     }
 }

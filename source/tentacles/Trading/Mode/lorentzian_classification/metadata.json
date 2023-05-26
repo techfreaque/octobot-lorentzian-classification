@@ -1,6 +1,6 @@
 {
-  "version": "1.2.5",
-  "origin_package": "Lorentzian-Classification",
+  "version": "1.3.0",
+  "origin_package": "Matrix-Basic-Tentacles",
   "tentacles": ["LorentzianClassificationMode"],
   "tentacles-requirements": ["TimeFrameStrategyEvaluator", "basic_tentacles"]
 }
