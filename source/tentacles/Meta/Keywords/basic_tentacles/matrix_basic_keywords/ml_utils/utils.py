@@ -52,11 +52,13 @@ class ClassificationSettings:
         color_compression: int,
         live_history_size: int,
         use_remote_fractals: bool,
+        required_neighbors: float,
         training_data_settings: YTrainSettings,
         down_sampler: typing.Callable[[int, int], bool],
         only_train_on_every_x_bars: typing.Optional[int] = None,
     ):
         self.neighbors_count: int = neighbors_count
+        self.required_neighbors: float = required_neighbors
         self.last_distance_neighbors_count: int = round(neighbors_count * 3 / 4)
         self.max_bars_back: int = max_bars_back
         self.color_compression: int = color_compression
@@ -74,8 +76,8 @@ class SignalDirection:
     short: int = -1
     neutral: int = 0
     tuple_long: typing.Tuple[int, int, int] = (1, 0, 0)
-    tuple_short: typing.Tuple[int, int, int] = (0, 1, 0)
-    tuple_neutral: typing.Tuple[int, int, int] = (0, 0, 1)
+    tuple_short: typing.Tuple[int, int, int] = (0, 0, 1)
+    tuple_neutral: typing.Tuple[int, int, int] = (0, 1, 0)
 
 
 class FeatureArrays:

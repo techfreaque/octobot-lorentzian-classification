@@ -1,6 +1,8 @@
 {
   "version": "1.1.0",
-  "origin_package": "Matrix-Basic-Tentacles",
-  "tentacles": ["basic_tentacles"],
+  "origin_package": "Octane-Default-Tentacles",
+  "tentacles": [
+    "basic_tentacles"
+  ],
   "tentacles-requirements": []
 }

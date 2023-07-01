@@ -62,6 +62,7 @@ def classify_current_candle(
         is_buy_signals=is_buy_signals,
         is_sell_signals=is_sell_signals,
         exit_type=order_settings.exit_type,
+        classification_settings=classification_settings,
     )
     return bars_since_green_entry, bars_since_red_entry
 
@@ -208,6 +209,7 @@ def get_y_train_series(
     lows: npt.NDArray[numpy.float64],
     highs: npt.NDArray[numpy.float64],
     training_data_settings: utils.YTrainSettings,
+    raise_missing_data: bool = False,
 ):
     if training_data_settings.training_data_type == utils.YTrainTypes.IS_WINNING_TRADE:
         y_train_series = []
@@ -264,7 +266,8 @@ def get_y_train_series(
                 utils.SignalDirection.neutral,
             ),
         )
-    verify_training_prediction_labels_completeness(y_train_series)
+    if raise_missing_data:
+        verify_training_prediction_labels_completeness(y_train_series)
     return y_train_series
 
 
@@ -300,6 +303,7 @@ def set_signals_from_prediction(
     is_buy_signals: list,
     is_sell_signals: list,
     exit_type: str,
+    classification_settings: utils.ClassificationSettings,
 ) -> typing.Tuple[int, int]:
     # ============================
     # ==== Prediction Filters ====
@@ -308,10 +312,12 @@ def set_signals_from_prediction(
     # Filtered Signal: The model's prediction of future price movement direction with user-defined filters applied
     signal = (
         utils.SignalDirection.long
-        if prediction > 0 and _filters.filter_all[candle_index]
+        if prediction > classification_settings.required_neighbors
+        and _filters.filter_all[candle_index]
         else (
             utils.SignalDirection.short
-            if prediction < 0 and _filters.filter_all[candle_index]
+            if prediction < -classification_settings.required_neighbors
+            and _filters.filter_all[candle_index]
             else previous_signals[-1]
         )
     )

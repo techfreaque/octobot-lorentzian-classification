@@ -99,6 +99,26 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
             order=2,
         )
+        prediction_threshold: int = self.UI.user_input(
+            "prediction_threshold",
+            enums.UserInputTypes.INT,
+            50,
+            inputs,
+            min_val=0,
+            max_val=100,
+            title="Percent of required neighbor signals",
+            parent_input_name=GENERAL_SETTINGS_NAME,
+            other_schema_values={
+                "description": "If you set this value to 80, a signal will require more than "
+                "80% of the neighbors to be winners in the past. For example if you "
+                "set the neighbors count to 10, a signal will require at least 9 "
+                "neighbors to be winners in the past to trigger a trade. "
+                "In the trading view version this value is 0 and cant be changed."
+            },
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
+            order=2,
+        )
+        required_neighbors: float = neighbors_count / 100 * prediction_threshold
         down_sampling_mode = self.UI.user_input(
             "down_sampler",
             enums.UserInputTypes.OPTIONS,
@@ -209,6 +229,7 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             max_bars_back=max_bars_back,
             color_compression=color_compression,
             down_sampler=this_down_sampler,
+            required_neighbors=required_neighbors,
             training_data_settings=utils.YTrainSettings(
                 training_data_type=utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS,
                 percent_for_a_win=2,

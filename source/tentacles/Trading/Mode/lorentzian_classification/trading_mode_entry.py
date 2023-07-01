@@ -1,3 +1,4 @@
+import typing
 from tulipy import InvalidOptionError
 
 import octobot_commons.logging as logging
@@ -41,7 +42,12 @@ class LorentzianClassificationMode(settings.LorentzianClassificationModeInputs):
 
 
 class LorentzianClassificationProducer(classification.LorentzianClassificationScript):
-    async def make_strategy(self, ctx: context_management.Context, action: str):
+    async def make_strategy(
+        self,
+        ctx: context_management.Context,
+        action: str,
+        action_data: typing.Optional[dict] = None,
+    ):
         self.action = action
         if matrix_enums.TradingModeCommands.INIT_CALL != action:
             self.allow_trading_only_on_execution(ctx)

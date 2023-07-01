@@ -1,6 +1,6 @@
 {
   "required_time_frames" : ["1h"],
   "required_evaluators" : [],
-  "required_candles_count" : 2000,
+  "required_candles_count" : 5000,
   "default_config" : []
 }

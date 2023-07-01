@@ -72,7 +72,7 @@ async def get_candles_(
         maker.candles[symbol] = {}
     if time_frame not in maker.candles[symbol]:
         maker.candles[symbol][time_frame] = {}
-    maker.candles[symbol][time_frame][source_name] = await _get_candles_from_name(
+    maker.candles[symbol][time_frame][source_name] = await get_candles_from_name(
         maker,
         source_name=source_name,
         time_frame=time_frame,
@@ -137,7 +137,7 @@ async def get_current_candle(
         return await exchange_public_data.current_live_price(maker.ctx, symbol=symbol)
 
 
-async def _get_candles_from_name(
+async def get_candles_from_name(
     maker, source_name, time_frame, symbol, max_history=True
 ):
     symbol = symbol or maker.ctx.symbol

@@ -336,7 +336,7 @@ class SpotMaster3000Making(
             return await public_exchange_data.get_current_candle(
                 self, matrix_enums.PriceDataSources.CLOSE.value, symbol=symbol
             )
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, TypeError):
             if not self.ctx.exchange_manager.is_backtesting and self.ctx.enable_trading:
                 self.ctx.logger.error(
                     f" Price missing for the candle, this is normal if "

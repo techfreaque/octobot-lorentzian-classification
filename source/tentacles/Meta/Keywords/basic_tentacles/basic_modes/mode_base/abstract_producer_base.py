@@ -1,3 +1,4 @@
+import time
 import typing
 import octobot_commons.logging as logging
 import octobot_commons.enums as commons_enums
@@ -103,6 +104,31 @@ class AbstractBaseModeProducer(
                 kline=kline,
             )
 
+    async def trading_view_signal_callback(
+        self,
+        parsed_data: dict,
+        exchange: str,
+        exchange_id: str,
+        cryptocurrency: str,
+        symbol: str,
+        time_frame: str,
+    ):
+        async with self.trading_mode_trigger(), self.trading_mode.remote_signal_publisher(
+            symbol
+        ):
+            await self.call_script(
+                matrix_id=self.matrix_id,
+                cryptocurrency=cryptocurrency,
+                symbol=symbol,
+                time_frame=time_frame,
+                trigger_source=matrix_enums.TradingModeCommands.TRADING_VIEW_CALLBACK,
+                trigger_cache_timestamp=time.time(),
+                action=matrix_enums.TradingModeCommands.TRADING_VIEW_CALLBACK,
+                kline=None,
+                candle=None,
+                action_data=parsed_data,
+            )
+
     async def call_script(
         self,
         matrix_id: str,
@@ -115,6 +141,7 @@ class AbstractBaseModeProducer(
         kline: dict = None,
         init_call: bool = False,
         action: typing.Optional[str] = None,
+        action_data: typing.Optional[dict] = None,
     ):
         context = context_management.get_full_context(
             self.trading_mode,
@@ -138,17 +165,17 @@ class AbstractBaseModeProducer(
         )
         self.ctx = context
         try:
-            await self.make_strategy(context, action)
+            await self.make_strategy(context, action, action_data)
             if (
                 hasattr(self.trading_mode, "TRADING_SCRIPT_MODULE")
                 and self.trading_mode.TRADING_SCRIPT_MODULE
             ):
                 try:
                     await self.trading_mode.get_script(live=True)(context)
-                except Exception as e:
+                except Exception as error:
                     self.ctx.logger.info(
                         "Failed to execution user generated custom trading script"
-                        f"{e}"
+                        f"{error}"
                     )
         except errors.UnreachableExchange:
             raise
@@ -172,7 +199,12 @@ class AbstractBaseModeProducer(
                 self.exchange_manager.bot_id, self.exchange_name, symbol
             ).set_initialized_flags(initialized, (time_frame,))
 
-    async def make_strategy(self, context, action: typing.Optional[str] = None):
+    async def make_strategy(
+        self,
+        context,
+        action: typing.Optional[str] = None,
+        action_data: typing.Optional[dict] = None,
+    ):
         pass
 
     def log_last_call_by_time_frame_and_symbol(
@@ -220,16 +252,16 @@ class AbstractBaseModeProducer(
 
     async def start(self):
         await super().start()
-        try:
-            import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as ping_pong_storage_management
-        except (ImportError, ModuleNotFoundError):
-            ping_pong_storage_management = None
-        if ping_pong_storage_management:
-            try:
-                await ping_pong_storage_management.init_ping_pong_storage(
-                    self.exchange_manager
-                )
-            except Exception as error:
-                logging.get_logger(self.trading_mode.get_name()).exception(
-                    error, True, f"Failed to restore ping pong storage - error: {error}"
-                )
+        # try:
+        #     import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as ping_pong_storage_management
+        # except (ImportError, ModuleNotFoundError):
+        #     ping_pong_storage_management = None
+        # if ping_pong_storage_management:
+        #     try:
+        #         await ping_pong_storage_management.init_ping_pong_storage(
+        #             self.exchange_manager
+        #         )
+        #     except Exception as error:
+        #         logging.get_logger(self.trading_mode.get_name()).exception(
+        #             error, True, f"Failed to restore ping pong storage - error: {error}"
+        #         )

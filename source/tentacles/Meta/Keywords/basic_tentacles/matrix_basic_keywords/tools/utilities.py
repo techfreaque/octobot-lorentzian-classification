@@ -1,18 +1,29 @@
 import time
 import typing
 import numpy.typing as npt
+from octobot_commons import enums
 
 import octobot_commons.logging.logging_util as logging_util
 import octobot_commons.symbols.symbol_util as symbol_util
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.data import (
+    public_exchange_data,
+)
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import (
+    PriceDataSources,
+)
 
 
-def start_measure_time(message=None):
+def start_measure_time(message: typing.Optional[str] = None) -> float:
     if message:
         print(message + " started")
     return time.time()
 
 
-def end_measure_time(m_time, message, min_duration=None):
+def end_measure_time(
+    m_time: typing.Union[int, float],
+    message: str,
+    min_duration: typing.Optional[typing.Union[int, float]] = None,
+) -> None:
     duration = round(time.time() - m_time, 2)
     if not min_duration or min_duration < duration:
         print(f"{message} done {duration}s")
@@ -67,7 +78,7 @@ def cut_data_to_same_len(
     for data in data_set:
         if data is not None:
             _len = len(data)
-            if not min_len or _len < min_len:
+            if min_len is None or _len < min_len:
                 min_len = _len
     for data in data_set:
         if data is not None:
@@ -106,3 +117,70 @@ def get_similar_symbol(
                 f"on {other_exchange_manager.exchange_name}"
             )
     return symbol
+
+
+async def normalize_any_time_frame_to_this_time_frame(
+    maker,
+    data,
+    source_time_frame: str,
+    target_time_frame: str,
+):
+    target_time_frame_timestamps: list = await public_exchange_data.get_candles_(
+        maker, PriceDataSources.TIME.value, time_frame=target_time_frame
+    )
+    source_time_frame_timestamps: list = await public_exchange_data.get_candles_(
+        maker, PriceDataSources.TIME.value, time_frame=source_time_frame
+    )
+
+    if source_time_frame == target_time_frame:
+        return data
+    # different time frame as trigger timeframe
+    data_time_frame_minutes = enums.TimeFramesMinutes[
+        enums.TimeFrames(source_time_frame)
+    ]
+    target_time_frame_minutes = enums.TimeFramesMinutes[
+        enums.TimeFrames(target_time_frame)
+    ]
+    candles_to_add = data_time_frame_minutes / target_time_frame_minutes
+
+    index = 1
+    unified_data = []
+    if candles_to_add > 0:
+        # target timeframe is smaller
+        for index in range(1, len(target_time_frame_timestamps)):
+            if source_time_frame_timestamps[-1] == target_time_frame_timestamps[-index]:
+                break
+            unified_data.insert(0, data[-1])
+            index += 1
+    else:
+        # target timeframe is bigger
+        raise NotImplementedError(
+            "Indicator timeframe must be gretaer or equal to the trigger timeframe"
+        )
+
+    origin_data_len = len(data)
+    target_data_len = len(target_time_frame_timestamps)
+    data_index = 2
+    try:
+        if candles_to_add > 0:
+            # target timeframe is smaller
+            while index <= target_data_len and origin_data_len >= data_index:
+                virtual_candle_index = 1
+                while (
+                    (virtual_candle_index <= candles_to_add)
+                    and index <= target_data_len
+                    and origin_data_len >= data_index
+                ):
+                    virtual_candle_index += 1
+                    unified_data.insert(0, data[-data_index])
+                    index += 1
+                data_index += 1
+        else:
+            # target timeframe is bigger
+            while index <= target_data_len:
+                pass
+        return unified_data
+    except Exception as error:
+        raise RuntimeError(
+            f"Failed to adapt indicator from {source_time_frame} to {target_time_frame}"
+        ) from error

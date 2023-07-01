@@ -23,6 +23,7 @@ class TradingModeCommands:
     INIT_CALL = "init_call"
     OHLC_CALLBACK = "ohlc_callback"
     KLINE_CALLBACK = "kline_callback"
+    TRADING_VIEW_CALLBACK = "trading_view_callback"
 
 
 class TradingSideKeys:

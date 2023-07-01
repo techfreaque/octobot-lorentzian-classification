@@ -14,6 +14,7 @@ async def plot_conditional(
     color: typing.Optional[str] = None,
     own_yaxis: bool = False,
     is_recording_mode: bool = False,
+    size: typing.Optional[int] = 10,
 ):
     y_values = []
     y_times = []
@@ -41,7 +42,7 @@ async def plot_conditional(
             chart=chart_location,
             own_yaxis=own_yaxis,
             mode="markers",
-            size=7,
+            size=size,
             color=color,
             line_shape=None,
         )
