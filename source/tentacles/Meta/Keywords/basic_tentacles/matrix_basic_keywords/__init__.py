@@ -6,3 +6,5 @@ from .matrix_enums import *
 from .matrix_errors import *
 from .ml_utils import *
 from .orders import *
+from .trade_analysis import *
+from .backtesting import *

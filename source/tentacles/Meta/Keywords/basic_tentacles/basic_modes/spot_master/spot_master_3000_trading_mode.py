@@ -62,14 +62,14 @@ class SpotMaster3000Making(
         await self.init_plot_settings()
         await self.init_plot_portfolio()
         if self.enable_plot:
-            try:
-                import tentacles.Meta.Keywords.pro_tentacles.trade_analysis.trade_analysis_activation as trade_analysis_activation
+            # try:
+            #     import tentacles.Meta.Keywords.pro_tentacles.trade_analysis.trade_analysis_activation as trade_analysis_activation
 
-                await trade_analysis_activation.handle_trade_analysis_for_current_candle(
-                    ctx, self.plot_settings_name
-                )
-            except (ImportError, ModuleNotFoundError):
-                pass
+            #     await trade_analysis_activation.handle_trade_analysis_for_current_candle(
+            #         ctx, self.plot_settings_name
+            #     )
+            # except (ImportError, ModuleNotFoundError):
+            #     pass
             await self.plot_portfolio()
 
     async def execute_orders(self) -> None:
@@ -110,29 +110,29 @@ class SpotMaster3000Making(
                             side=order_to_execute.change_side,
                             amount=amount,
                         )
-                elif (
-                    self.order_type
-                    == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
-                ):
-                    amount = self.round_up_order_amount_if_enabled(
-                        available_amount=order_to_execute.available_amount,
-                        order_amount=order_to_execute.order_amount_available,
-                        order_price=order_to_execute.asset_value,
-                        symbol=order_to_execute.symbol,
-                        order_side=order_to_execute.change_side,
-                    )
-                    if amount:
-                        try:
-                            import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+                # elif (
+                #     self.order_type
+                #     == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
+                # ):
+                #     amount = self.round_up_order_amount_if_enabled(
+                #         available_amount=order_to_execute.available_amount,
+                #         order_amount=order_to_execute.order_amount_available,
+                #         order_price=order_to_execute.asset_value,
+                #         symbol=order_to_execute.symbol,
+                #         order_side=order_to_execute.change_side,
+                #     )
+                #     if amount:
+                #         try:
+                #             import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
 
-                            await activate_managed_order.managed_order(
-                                self,
-                                forced_amount=amount,
-                                trading_side=order_to_execute.change_side,
-                                orders_settings=self.managed_order_settings,
-                            )
-                        except (ImportError, ModuleNotFoundError):
-                            self.ctx.logger.error("Failed to import managed order pro")
+                #             await activate_managed_order.managed_order(
+                #                 self,
+                #                 forced_amount=amount,
+                #                 trading_side=order_to_execute.change_side,
+                #                 orders_settings=self.managed_order_settings,
+                #             )
+                #         except (ImportError, ModuleNotFoundError):
+                #             self.ctx.logger.error("Failed to import managed order pro")
 
     def initialize_portfolio_values(self) -> bool:
         self.portfolio = portfolio.get_portfolio(self.ctx.exchange_manager)

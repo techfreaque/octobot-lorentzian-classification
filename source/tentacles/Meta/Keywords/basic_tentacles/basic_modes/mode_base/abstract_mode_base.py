@@ -24,7 +24,7 @@ PING_PONG_STORAGE_LOADING_TIMEOUT = 1000
 
 
 class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMode):
-    ENABLE_PRO_FEATURES = True
+    ENABLE_PRO_FEATURES = False
     AVAILABLE_API_ACTIONS = [matrix_enums.TradingModeCommands.EXECUTE]
 
     ALLOW_CUSTOM_TRIGGER_SOURCE = True
@@ -156,48 +156,48 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                         "is not initialized"
                     )
 
-    def init_user_inputs(self, inputs: dict) -> None:
-        if self.ENABLE_PRO_FEATURES:
-            try:
-                import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
-            except (ImportError, ModuleNotFoundError):
-                simple_ping_pong = None
-            if simple_ping_pong:
-                self.enable_ping_pong = self.UI.user_input(
-                    "enable_ping_pong",
-                    commons_enums.UserInputTypes.BOOLEAN.value,
-                    False,
-                    registered_inputs=inputs,
-                    title="Enable ping pong capabilities",
-                    other_schema_values={
-                        "description": "requires a restart after enabling - "
-                        "required to use managed ping pong orders"
-                    },
-                    show_in_optimizer=False,
-                    show_in_summary=False,
-                    order=1000,
-                )
-            else:
-                self.enable_ping_pong = False
-            import tentacles.Meta.Keywords.pro_tentacles.pro_modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
+    # def init_user_inputs(self, inputs: dict) -> None:
+        # if self.ENABLE_PRO_FEATURES:
+        #     try:
+        #         import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
+        #     except (ImportError, ModuleNotFoundError):
+        #         simple_ping_pong = None
+        #     if simple_ping_pong:
+        #         self.enable_ping_pong = self.UI.user_input(
+        #             "enable_ping_pong",
+        #             commons_enums.UserInputTypes.BOOLEAN.value,
+        #             False,
+        #             registered_inputs=inputs,
+        #             title="Enable ping pong capabilities",
+        #             other_schema_values={
+        #                 "description": "requires a restart after enabling - "
+        #                 "required to use managed ping pong orders"
+        #             },
+        #             show_in_optimizer=False,
+        #             show_in_summary=False,
+        #             order=1000,
+        #         )
+        #     else:
+        #         self.enable_ping_pong = False
+        #     import tentacles.Meta.Keywords.pro_tentacles.pro_modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
 
-            if execute_real_time_strategy:
-                self.enable_real_time_strategy = self.UI.user_input(
-                    "enable_real_time_strategy",
-                    commons_enums.UserInputTypes.BOOLEAN.value,
-                    False,
-                    registered_inputs=inputs,
-                    title="Enable real time strategy",
-                    other_schema_values={
-                        "description": "requires a restart after enabling - define a "
-                        "strategy that is based on the real time price"
-                    },
-                    show_in_optimizer=False,
-                    show_in_summary=False,
-                    order=1000,
-                )
-            else:
-                self.real_time_strategy = False
+        #     if execute_real_time_strategy:
+        #         self.enable_real_time_strategy = self.UI.user_input(
+        #             "enable_real_time_strategy",
+        #             commons_enums.UserInputTypes.BOOLEAN.value,
+        #             False,
+        #             registered_inputs=inputs,
+        #             title="Enable real time strategy",
+        #             other_schema_values={
+        #                 "description": "requires a restart after enabling - define a "
+        #                 "strategy that is based on the real time price"
+        #             },
+        #             show_in_optimizer=False,
+        #             show_in_summary=False,
+        #             order=1000,
+        #         )
+        #     else:
+        #         self.real_time_strategy = False
 
     async def create_consumers(self) -> list:
         """
@@ -205,40 +205,40 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
         :return: the list of consumers created
         """
         consumers = await super().create_consumers()
-        if self.enable_ping_pong:
-            consumers.append(
-                await exchanges_channel.get_chan(
-                    trading_personal_data.OrdersChannel.get_name(),
-                    self.exchange_manager.id,
-                ).new_consumer(
-                    self._order_callback,
-                    symbol=self.symbol
-                    if self.symbol
-                    else channel_constants.CHANNEL_WILDCARD,
-                )
-            )
-        if self.enable_real_time_strategy:
-            import tentacles.Meta.Keywords.pro_tentacles.pro_modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
+        # if self.enable_ping_pong:
+        #     consumers.append(
+        #         await exchanges_channel.get_chan(
+        #             trading_personal_data.OrdersChannel.get_name(),
+        #             self.exchange_manager.id,
+        #         ).new_consumer(
+        #             self._order_callback,
+        #             symbol=self.symbol
+        #             if self.symbol
+        #             else channel_constants.CHANNEL_WILDCARD,
+        #         )
+        #     )
+        # if self.enable_real_time_strategy:
+        #     import tentacles.Meta.Keywords.pro_tentacles.pro_modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
 
-            self.real_time_strategy_data: execute_real_time_strategy.RealTimeStrategies = (
-                execute_real_time_strategy.RealTimeStrategies()
-            )
-            if (
-                matrix_enums.TradingModeCommands.ACTIVATE_REALTIME_STRATEGY
-                not in self.AVAILABLE_API_ACTIONS
-            ):
-                self.AVAILABLE_API_ACTIONS = self.AVAILABLE_API_ACTIONS + [
-                    matrix_enums.TradingModeCommands.ACTIVATE_REALTIME_STRATEGY,
-                    matrix_enums.TradingModeCommands.DISABLE_REALTIME_STRATEGY,
-                ]
-            consumers.append(
-                await exchanges_channel.get_chan(
-                    trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id
-                ).new_consumer(
-                    self._mark_price_callback,
-                    symbol=self.symbol,
-                )
-            )
+        #     self.real_time_strategy_data: execute_real_time_strategy.RealTimeStrategies = (
+        #         execute_real_time_strategy.RealTimeStrategies()
+        #     )
+        #     if (
+        #         matrix_enums.TradingModeCommands.ACTIVATE_REALTIME_STRATEGY
+        #         not in self.AVAILABLE_API_ACTIONS
+        #     ):
+        #         self.AVAILABLE_API_ACTIONS = self.AVAILABLE_API_ACTIONS + [
+        #             matrix_enums.TradingModeCommands.ACTIVATE_REALTIME_STRATEGY,
+        #             matrix_enums.TradingModeCommands.DISABLE_REALTIME_STRATEGY,
+        #         ]
+        #     consumers.append(
+        #         await exchanges_channel.get_chan(
+        #             trading_constants.MARK_PRICE_CHANNEL, self.exchange_manager.id
+        #         ).new_consumer(
+        #             self._mark_price_callback,
+        #             symbol=self.symbol,
+        #         )
+        #     )
         return consumers
 
     async def _create_user_input_consumer(self):
@@ -279,33 +279,33 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
             mark_price=mark_price,
         )
 
-    async def _order_callback(
-        self,
-        exchange,
-        exchange_id,
-        cryptocurrency,
-        symbol,
-        order,
-        is_from_bot,
-        update_type,
-    ):
-        if (
-            is_from_bot
-            and update_type == trading_enums.OrderUpdateType.STATE_CHANGE.value
-        ):
-            try:
-                import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
+    # async def _order_callback(
+    #     self,
+    #     exchange,
+    #     exchange_id,
+    #     cryptocurrency,
+    #     symbol,
+    #     order,
+    #     is_from_bot,
+    #     update_type,
+    # ):
+    #     if (
+    #         is_from_bot
+    #         and update_type == trading_enums.OrderUpdateType.STATE_CHANGE.value
+    #     ):
+    #         try:
+    #             import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
 
-                await simple_ping_pong.play_ping_pong(
-                    self,
-                    exchange,
-                    exchange_id,
-                    cryptocurrency,
-                    symbol,
-                    order,
-                )
-            except (ImportError, ModuleNotFoundError):
-                pass
+    #             await simple_ping_pong.play_ping_pong(
+    #                 self,
+    #                 exchange,
+    #                 exchange_id,
+    #                 cryptocurrency,
+    #                 symbol,
+    #                 order,
+    #             )
+    #         except (ImportError, ModuleNotFoundError):
+    #             pass
 
     def set_initialized_trading_pair_by_bot_id(self, symbol, time_frame, initialized):
         # todo migrate to event tree

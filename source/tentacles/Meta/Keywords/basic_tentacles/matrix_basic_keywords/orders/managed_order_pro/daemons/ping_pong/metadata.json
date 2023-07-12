@@ -1,0 +1,6 @@
+{
+  "version": "0.6.3",
+  "origin_package": "Matrix-Pro-Keywords",
+  "tentacles": ["PingPongStorage"],
+  "tentacles-requirements": ["matrix_pro_keywords"]
+}

@@ -1,0 +1,6 @@
+{
+  "version": "0.6.9",
+  "origin_package": "Matrix-Pro-Keywords",
+  "tentacles": ["OrderManagerPro"],
+  "tentacles-requirements": ["matrix_pro_keywords"]
+}

@@ -125,6 +125,9 @@ async def normalize_any_time_frame_to_this_time_frame(
     source_time_frame: str,
     target_time_frame: str,
 ):
+    if source_time_frame == target_time_frame:
+        return data
+    # different time frame as trigger timeframe
     target_time_frame_timestamps: list = await public_exchange_data.get_candles_(
         maker, PriceDataSources.TIME.value, time_frame=target_time_frame
     )
@@ -132,9 +135,6 @@ async def normalize_any_time_frame_to_this_time_frame(
         maker, PriceDataSources.TIME.value, time_frame=source_time_frame
     )
 
-    if source_time_frame == target_time_frame:
-        return data
-    # different time frame as trigger timeframe
     data_time_frame_minutes = enums.TimeFramesMinutes[
         enums.TimeFrames(source_time_frame)
     ]
@@ -142,45 +142,76 @@ async def normalize_any_time_frame_to_this_time_frame(
         enums.TimeFrames(target_time_frame)
     ]
     candles_to_add = data_time_frame_minutes / target_time_frame_minutes
-
-    index = 1
-    unified_data = []
-    if candles_to_add > 0:
-        # target timeframe is smaller
-        for index in range(1, len(target_time_frame_timestamps)):
-            if source_time_frame_timestamps[-1] == target_time_frame_timestamps[-index]:
-                break
-            unified_data.insert(0, data[-1])
-            index += 1
-    else:
-        # target timeframe is bigger
-        raise NotImplementedError(
-            "Indicator timeframe must be gretaer or equal to the trigger timeframe"
-        )
-
-    origin_data_len = len(data)
-    target_data_len = len(target_time_frame_timestamps)
-    data_index = 2
     try:
-        if candles_to_add > 0:
-            # target timeframe is smaller
-            while index <= target_data_len and origin_data_len >= data_index:
-                virtual_candle_index = 1
-                while (
-                    (virtual_candle_index <= candles_to_add)
-                    and index <= target_data_len
-                    and origin_data_len >= data_index
-                ):
-                    virtual_candle_index += 1
-                    unified_data.insert(0, data[-data_index])
-                    index += 1
-                data_index += 1
-        else:
-            # target timeframe is bigger
-            while index <= target_data_len:
-                pass
-        return unified_data
+        if candles_to_add > 1:
+            return _normalize_to_smaller_time_frame(
+                candles_to_add,
+                target_time_frame_timestamps,
+                source_time_frame_timestamps,
+                data,
+            )
+        return normalize_to_bigger_time_frame(
+            target_time_frame_timestamps,
+            source_time_frame_timestamps,
+            data,
+        )
     except Exception as error:
         raise RuntimeError(
             f"Failed to adapt indicator from {source_time_frame} to {target_time_frame}"
         ) from error
+
+
+def _normalize_to_smaller_time_frame(
+    candles_to_add, target_time_frame_timestamps, source_time_frame_timestamps, data
+):
+    first_full_index = 1
+    unified_data = []
+    # target timeframe is smaller
+    # adds last candle and finds second last index
+    for index in range(1, len(target_time_frame_timestamps)):
+        if source_time_frame_timestamps[-1] == target_time_frame_timestamps[-index]:
+            break
+        unified_data.insert(0, data[-1])
+        first_full_index += 1
+
+    origin_data_len = len(data)
+    target_data_len = len(target_time_frame_timestamps)
+    data_index = 2
+    # normalize all other data
+    while first_full_index <= target_data_len and origin_data_len >= data_index:
+        virtual_candle_index = 1
+        while (
+            (virtual_candle_index <= candles_to_add)
+            and first_full_index <= target_data_len
+            and origin_data_len >= data_index
+        ):
+            virtual_candle_index += 1
+            unified_data.insert(0, data[-data_index])
+            first_full_index += 1
+        data_index += 1
+    return unified_data
+
+
+def normalize_to_bigger_time_frame(
+    target_time_frame_timestamps, source_time_frame_timestamps, data
+):
+    # target timeframe is bigger
+    # adds last few candle and finds next index
+    target_index_start_index = 1
+    unified_data = []
+    cut_source_time_frame_timestamps, cut_data = cut_data_to_same_len(
+        (source_time_frame_timestamps, data)
+    )
+    for source_index in range(1, len(cut_source_time_frame_timestamps)):
+        for target_index in range(
+            target_index_start_index, len(target_time_frame_timestamps)
+        ):
+            if (
+                target_time_frame_timestamps[-target_index]
+                == cut_source_time_frame_timestamps[-source_index]
+            ):
+                target_index_start_index = target_index
+                unified_data.insert(0, cut_data[-source_index])
+                break
+
+    return unified_data

@@ -36,11 +36,13 @@ class TimeFrameStrategyEvaluator(evaluators.StrategyEvaluator):
             other_schema_values={
                 "description": "The time frames that can be accessed by the trading mode"
             },
+            show_in_optimizer=False,
+            show_in_summary=False,
         )
         self.UI.user_input(
             common_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT,
             common_enums.UserInputTypes.INT,
-            2000,
+            200,
             inputs,
             min_val=200,
             title="Amount of historical live candles (requires a restart of Octobot)",
@@ -50,6 +52,8 @@ class TimeFrameStrategyEvaluator(evaluators.StrategyEvaluator):
                 " each execution on each bar. "
                 "The lower this value is, the faster each bar will get executed!"
             },
+            show_in_optimizer=False,
+            show_in_summary=False,
         )
         # # TODO replace with common_constants.CONFIG_TENTACLES_BACKTESTING_REQUIRED_CANDLES_COUNT
         # self.specific_config["backtesting_required_candles_count"] = 200

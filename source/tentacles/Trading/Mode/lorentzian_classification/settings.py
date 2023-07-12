@@ -8,7 +8,7 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.ut
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.analysis_enums as analysis_enums
 
 try:
-    import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+    import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
 except (ImportError, ModuleNotFoundError):
     activate_managed_order = None
 

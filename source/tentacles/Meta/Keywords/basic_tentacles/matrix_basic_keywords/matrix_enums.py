@@ -67,3 +67,9 @@ class PriceDataSources(enum.Enum):
     HEIKIN_ASHI_OPEN = "Heikin Ashi open"
     HEIKIN_ASHI_HIGH = "Heikin Ashi high"
     HEIKIN_ASHI_LOW = "Heikin Ashi low"
+
+
+TAG_SEPERATOR = "xx"
+TAKE_PROFIT = "tp"
+ENTRY = "e"
+STOP_LOSS = "sl"

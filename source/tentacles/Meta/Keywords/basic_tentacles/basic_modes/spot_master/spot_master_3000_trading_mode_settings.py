@@ -43,19 +43,19 @@ class SpotMaster3000ModeSettings(
         matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value,
     ]
     live_plotting_mode: str = matrix_enums.LivePlottingModes.PLOT_RECORDING_MODE.value
-    try:
-        import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+    # try:
+    #     import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
 
-        available_order_types: list = [
-            spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value,
-            spot_master_enums.SpotMasterOrderTypes.MARKET.value,
-            spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
-        ]
-    except (ImportError, ModuleNotFoundError):
-        available_order_types: list = [
-            spot_master_enums.SpotMasterOrderTypes.MARKET.value,
-            spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
-        ]
+    #     available_order_types: list = [
+    #         spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value,
+    #         spot_master_enums.SpotMasterOrderTypes.MARKET.value,
+    #         spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
+    #     ]
+    # except (ImportError, ModuleNotFoundError):
+    available_order_types: list = [
+        spot_master_enums.SpotMasterOrderTypes.MARKET.value,
+        spot_master_enums.SpotMasterOrderTypes.LIMIT.value,
+    ]
 
     managed_order_settings = None
 
@@ -320,88 +320,88 @@ class SpotMaster3000ModeSettings(
                 "below/above the price.",
             },
         )
-        if (
-            self.order_type
-            == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
-        ):
-            try:
-                import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+        # if (
+        #     self.order_type
+        #     == spot_master_enums.SpotMasterOrderTypes.MANAGED_ORDER.value
+        # ):
+        #     try:
+        #         import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
 
-                self.managed_order_settings = (
-                    await activate_managed_order.activate_managed_orders(
-                        self,
-                        parent_input_name=self.order_settings_name,
-                        order_tag_prefix="spot",
-                        name_prefix="smaster",
-                        enable_position_size_settings=False,
-                        enable_stop_loss_settings=False,
-                        enable_take_profit_settings=False,
-                    )
-                )
-            except (ImportError, ModuleNotFoundError):
-                self.ctx.error("Failed to import managed order pro")
-        else:
-            entry_settings_name = "entry_settings"
-            if self.order_type == spot_master_enums.SpotMasterOrderTypes.LIMIT.value:
-                await user_inputs.user_input(
-                    self.ctx,
-                    entry_settings_name,
-                    commons_enums.UserInputTypes.OBJECT,
-                    def_val=None,
-                    title="Entry Settings",
-                    editor_options={
-                        "grid_columns": 12,
-                    },
-                    parent_input_name=self.order_settings_name,
-                    show_in_summary=False,
-                )
-                self.limit_buy_offset = await user_inputs.user_input(
-                    self.ctx,
-                    "limit_buy_offset",
-                    commons_enums.UserInputTypes.FLOAT,
-                    def_val=0.5,
-                    title="Distance in % from current price to buy limit orders",
-                    parent_input_name=entry_settings_name,
-                    editor_options={
-                        "grid_columns": 4,
-                    },
-                    other_schema_values={
-                        "description": "Whenever a rebalancing gets triggered it will "
-                        "place the buy order X % below the current price",
-                    },
-                )
-                self.limit_sell_offset = await user_inputs.user_input(
-                    self.ctx,
-                    "limit_sell_offset",
-                    commons_enums.UserInputTypes.FLOAT,
-                    def_val=0.5,
-                    title="Distance in % from current price to sell limit orders",
-                    parent_input_name=entry_settings_name,
-                    editor_options={
-                        "grid_columns": 4,
-                    },
-                    other_schema_values={
-                        "description": "Whenever a rebalancing gets triggered it will "
-                        "place the sell order X % above the current price",
-                    },
-                )
-                self.limit_max_age_in_bars = await user_inputs.user_input(
-                    self.ctx,
-                    "limit_max_age",
-                    commons_enums.UserInputTypes.INT,
-                    def_val=3,
-                    min_val=1,
-                    title="Maximum bars to wait for a limit order to get filled",
-                    parent_input_name=entry_settings_name,
-                    editor_options={
-                        "grid_columns": 4,
-                    },
-                    other_schema_values={
-                        "description": "If the order is still unfilled after the time "
-                        "is passed, the order will get cancelled and the balance "
-                        "will be available for rebalancing again.",
-                    },
-                )
+        #         self.managed_order_settings = (
+        #             await activate_managed_order.activate_managed_orders(
+        #                 self,
+        #                 parent_input_name=self.order_settings_name,
+        #                 order_tag_prefix="spot",
+        #                 name_prefix="smaster",
+        #                 enable_position_size_settings=False,
+        #                 enable_stop_loss_settings=False,
+        #                 enable_take_profit_settings=False,
+        #             )
+        #         )
+        #     except (ImportError, ModuleNotFoundError):
+        #         self.ctx.error("Failed to import managed order pro")
+        # else:
+        entry_settings_name = "entry_settings"
+        if self.order_type == spot_master_enums.SpotMasterOrderTypes.LIMIT.value:
+            await user_inputs.user_input(
+                self.ctx,
+                entry_settings_name,
+                commons_enums.UserInputTypes.OBJECT,
+                def_val=None,
+                title="Entry Settings",
+                editor_options={
+                    "grid_columns": 12,
+                },
+                parent_input_name=self.order_settings_name,
+                show_in_summary=False,
+            )
+            self.limit_buy_offset = await user_inputs.user_input(
+                self.ctx,
+                "limit_buy_offset",
+                commons_enums.UserInputTypes.FLOAT,
+                def_val=0.5,
+                title="Distance in % from current price to buy limit orders",
+                parent_input_name=entry_settings_name,
+                editor_options={
+                    "grid_columns": 4,
+                },
+                other_schema_values={
+                    "description": "Whenever a rebalancing gets triggered it will "
+                    "place the buy order X % below the current price",
+                },
+            )
+            self.limit_sell_offset = await user_inputs.user_input(
+                self.ctx,
+                "limit_sell_offset",
+                commons_enums.UserInputTypes.FLOAT,
+                def_val=0.5,
+                title="Distance in % from current price to sell limit orders",
+                parent_input_name=entry_settings_name,
+                editor_options={
+                    "grid_columns": 4,
+                },
+                other_schema_values={
+                    "description": "Whenever a rebalancing gets triggered it will "
+                    "place the sell order X % above the current price",
+                },
+            )
+            self.limit_max_age_in_bars = await user_inputs.user_input(
+                self.ctx,
+                "limit_max_age",
+                commons_enums.UserInputTypes.INT,
+                def_val=3,
+                min_val=1,
+                title="Maximum bars to wait for a limit order to get filled",
+                parent_input_name=entry_settings_name,
+                editor_options={
+                    "grid_columns": 4,
+                },
+                other_schema_values={
+                    "description": "If the order is still unfilled after the time "
+                    "is passed, the order will get cancelled and the balance "
+                    "will be available for rebalancing again.",
+                },
+            )
 
     async def init_plot_portfolio(self) -> None:
         if not (
