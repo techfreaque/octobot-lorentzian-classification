@@ -5,11 +5,11 @@ import numpy.typing as npt
 import octobot_commons.enums as enums
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords.context_management as context_management
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import UserInputEditorOptionsTypes
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order as market_order
 import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_settings as backtesting_settings
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.utils as utils
-import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.analysis_enums as analysis_enums
 import tentacles.Trading.Mode.lorentzian_classification.settings as lorentzian_settings
 
 try:
@@ -202,12 +202,12 @@ class LorentzianTradeExecution:
                     title="Long Trade Settings",
                     editor_options={
                         enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                        analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "RiseOutlined",
+                        UserInputEditorOptionsTypes.ANT_ICON.value: "RiseOutlined",
                         enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
                         enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                     },
                     # other_schema_values={
-                    #     # analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
+                    #     # UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
                     # },
                     parent_input_name=lorentzian_settings.ORDER_SETTINGS_NAME,
                 )
@@ -228,12 +228,12 @@ class LorentzianTradeExecution:
                     title="Short Trade Settings",
                     editor_options={
                         enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
-                        analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "FallOutlined",
+                        UserInputEditorOptionsTypes.ANT_ICON.value: "FallOutlined",
                         enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
                         enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                     },
                     other_schema_values={
-                        # analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
+                        # UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
                     },
                     parent_input_name=lorentzian_settings.ORDER_SETTINGS_NAME,
                 )

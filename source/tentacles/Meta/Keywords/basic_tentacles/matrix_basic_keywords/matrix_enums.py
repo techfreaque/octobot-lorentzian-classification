@@ -46,6 +46,11 @@ class TradingSidesNames:
 
 class UserInputOtherSchemaValuesTypes(enum.Enum):
     DISPLAY_AS_TAB = "display_as_tab"  # used by octo ui2
+    TAB_ORDER = "order"  # used by octo ui2
+
+
+class UserInputEditorOptionsTypes(enum.Enum):
+    ANT_ICON = "antIcon"  # used by octo ui2
 
 
 class PriceDataSources(enum.Enum):

@@ -1,11 +1,14 @@
 import typing
 import octobot_commons.enums as enums
 import octobot_trading.util.config_util as config_util
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import (
+    UserInputEditorOptionsTypes,
+    UserInputOtherSchemaValuesTypes,
+)
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.classification_functions.classification_utils as classification_utils
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.classification_functions.downsampling as downsampling
 import tentacles.Meta.Keywords.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.utils as utils
-import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.analysis_enums as analysis_enums
 
 try:
     import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
@@ -56,11 +59,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "RobotOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "RobotOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 2,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 2,
             },
         )
 
@@ -289,11 +292,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "FunctionOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "FunctionOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 4,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 4,
             },
         )
         feature_count = self.UI.user_input(
@@ -590,11 +593,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "BulbOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "BulbOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 6,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 6,
             },
         )
         self.kernel_settings: utils.KernelSettings = utils.KernelSettings(
@@ -724,11 +727,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "FilterOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "FilterOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 8,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 8,
             },
         )
         volatility_filter_name = "volatility_filter_settings"
@@ -964,11 +967,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "DollarOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "DollarOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 10,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 10,
             },
         )
         source = self.UI.user_input(
@@ -1135,11 +1138,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "ShoppingCartOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "ShoppingCartOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 12,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 12,
             },
         )
         exit_type = self.UI.user_input(
@@ -1290,11 +1293,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "LineChartOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "LineChartOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 14,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 14,
             },
         )
         self.display_settings: utils.DisplaySettings = utils.DisplaySettings(
