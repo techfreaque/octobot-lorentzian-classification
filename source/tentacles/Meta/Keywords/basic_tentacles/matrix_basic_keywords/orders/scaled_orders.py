@@ -103,6 +103,7 @@ async def scaled_order(
             order_tag_id,
         ) = await calculate_scaled_order(
             maker,
+            order_block=order_block,
             side=side,
             order_type_name=order_type_name,
             current_price=current_price,
@@ -269,6 +270,7 @@ async def scaled_order(
 
 async def calculate_scaled_order(
     maker,
+    order_block,
     order_type_name,
     current_price,
     side=None,
@@ -358,6 +360,7 @@ async def calculate_scaled_order(
         entry_prices.append(normalized_scale_from_price)
         await get_stop_loss_from_group_settings(
             group_orders_settings=group_orders_settings,
+            order_block=order_block,
             side=side,
             entry_price=normalized_scale_from_price,
             current_price=current_price,
@@ -374,14 +377,15 @@ async def calculate_scaled_order(
             )
             prev_price = entry_prices[-1]
             await get_stop_loss_from_group_settings(
-                group_orders_settings,
-                side,
-                entry_prices[-1],
-                current_price,
-                filled_entry_prices,
-                maker,
-                stop_loss_prices,
-                stop_loss_percents,
+                group_orders_settings=group_orders_settings,
+                order_block=order_block,
+                side=side,
+                entry_price=entry_prices[-1],
+                current_price=current_price,
+                filled_entry_prices=filled_entry_prices,
+                maker=maker,
+                stop_loss_prices=stop_loss_prices,
+                stop_loss_percents=stop_loss_percents,
             )
 
     elif price_distribution_type == "flat":
@@ -398,6 +402,7 @@ async def calculate_scaled_order(
             group_orders_settings,
             current_price,
             maker,
+            order_block,
         )
     else:
         raise RuntimeError(
@@ -518,6 +523,7 @@ async def calculate_scaled_order(
 
 async def get_stop_loss_from_group_settings(
     group_orders_settings,
+    order_block,
     side,
     entry_price,
     current_price,
@@ -533,9 +539,10 @@ async def get_stop_loss_from_group_settings(
             entry_price = entry_price if entry_price > current_price else current_price
         filled_entry_prices.append(entry_price)
         stop_loss_price, stop_loss_percent = await stop_loss.get_manged_order_stop_loss(
-            maker,
-            group_orders_settings.stop_loss,
-            side,
+            maker=maker,
+            order_block=order_block,
+            stop_loss_settings=group_orders_settings.stop_loss,
+            trading_side=side,
             entry_price=entry_price,
             current_price=current_price,
         )
@@ -562,6 +569,7 @@ async def calculate_flat_distribution(
     group_orders_settings,
     current_price,
     maker,
+    order_block,
 ) -> list:
     entry_prices = []
     stop_loss_prices = []
@@ -573,14 +581,15 @@ async def calculate_flat_distribution(
         for i in range(0, count):
             entry_prices.append(scale_from - (step_size * i))
             await get_stop_loss_from_group_settings(
-                group_orders_settings,
-                side,
-                entry_prices[-1],
-                current_price,
-                filled_entry_prices,
-                maker,
-                stop_loss_prices,
-                stop_loss_percents,
+                group_orders_settings=group_orders_settings,
+                order_block=order_block,
+                side=side,
+                entry_price=entry_prices[-1],
+                current_price=current_price,
+                filled_entry_prices=filled_entry_prices,
+                maker=maker,
+                stop_loss_prices=stop_loss_prices,
+                stop_loss_percents=stop_loss_percents,
             )
     elif scale_to > scale_from:
         price_difference = scale_to - scale_from
@@ -588,14 +597,15 @@ async def calculate_flat_distribution(
         for i in range(0, count):
             entry_prices.append(scale_from + (step_size * i))
             await get_stop_loss_from_group_settings(
-                group_orders_settings,
-                side,
-                entry_prices[-1],
-                current_price,
-                filled_entry_prices,
-                maker,
-                stop_loss_prices,
-                stop_loss_percents,
+                group_orders_settings=group_orders_settings,
+                order_block=order_block,
+                side=side,
+                entry_price=entry_prices[-1],
+                current_price=current_price,
+                filled_entry_prices=filled_entry_prices,
+                maker=maker,
+                stop_loss_prices=stop_loss_prices,
+                stop_loss_percents=stop_loss_percents,
             )
     return entry_prices, stop_loss_prices, filled_entry_prices, stop_loss_percents
 

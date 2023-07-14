@@ -253,15 +253,32 @@ def get_y_train_series(
                     if comparing_high_candle >= short_lose_price:
                         is_short = False
             y_train_series.append(signal)
-    else:
+    elif (
+        training_data_settings.training_data_type
+        == utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS
+    ):
         cutted_closes, _ = basic_utilities.shift_data(closes, 4)
         _, shifted_lows = basic_utilities.shift_data(lows, 4)
         _, shifted_highs = basic_utilities.shift_data(highs, 4)
         y_train_series = numpy.where(
-            shifted_lows < cutted_closes,
+            shifted_highs < cutted_closes,
             utils.SignalDirection.short,
             numpy.where(
-                shifted_highs > cutted_closes,
+                shifted_lows > cutted_closes,
+                utils.SignalDirection.long,
+                utils.SignalDirection.neutral,
+            ),
+        )
+    elif (
+        training_data_settings.training_data_type
+        == utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS_CLOSES
+    ):
+        cutted_closes, shifted_closes = basic_utilities.shift_data(closes, 4)
+        y_train_series = numpy.where(
+            shifted_closes < cutted_closes,
+            utils.SignalDirection.short,
+            numpy.where(
+                shifted_closes > cutted_closes,
                 utils.SignalDirection.long,
                 utils.SignalDirection.neutral,
             ),

@@ -16,6 +16,7 @@ except (ImportError, ModuleNotFoundError):
     activate_managed_order = None
 
 GENERAL_SETTINGS_NAME = "general_settings"
+TRAINING_DATA_SETTINGS_NAME = "training_data_settings"
 DATA_SOURCE_SETTINGS_NAME = "data_source_settings"
 FEATURE_ENGINEERING_SETTINGS_NAME = "feature_engineering_settings"
 FILTER_SETTINGS_NAME = "filter_settings"
@@ -121,6 +122,98 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
             order=2,
         )
+        self.UI.user_input(
+            TRAINING_DATA_SETTINGS_NAME,
+            enums.UserInputTypes.OBJECT,
+            None,
+            inputs,
+            title="Training Data Settings",
+            editor_options={
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+            },
+            parent_input_name=GENERAL_SETTINGS_NAME,
+        )
+        training_data_type_str: int = self.UI.user_input(
+            "training_data_type",
+            enums.UserInputTypes.OPTIONS,
+            utils.YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS_CLOSES,
+            inputs,
+            options=[
+                utils.YTrainTypeDescriptions.IS_WINNING_TRADE,
+                utils.YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS,
+                utils.YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS_CLOSES,
+            ],
+            title="Training data type",
+            parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+            other_schema_values={"description": ""},
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
+            order=1,
+        )
+        training_data_type: utils.YTrainTypes = utils.Y_TRAIN_DESCRIPTIONS_TO_TYPES[
+            training_data_type_str
+        ]
+        percent_for_a_win: typing.Optional[float] = None
+        percent_for_a_loss: typing.Optional[float] = None
+        is_in_profit_after_x_bars: typing.Optional[int] = None
+        if training_data_type == utils.YTrainTypes.IS_WINNING_TRADE:
+            percent_for_a_win = self.UI.user_input(
+                "percent_for_a_win",
+                enums.UserInputTypes.FLOAT,
+                2,
+                inputs,
+                min_val=0,
+                max_val=100,
+                title="Percent to count as a winning trade",
+                parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+                other_schema_values={
+                    "description": "A trade for the training data will be considered as a win if it hits the win percentge before the loss percentage"
+                },
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+                order=2,
+            )
+            percent_for_a_loss = self.UI.user_input(
+                "percent_for_a_loss",
+                enums.UserInputTypes.FLOAT,
+                0.5,
+                inputs,
+                min_val=0,
+                max_val=100,
+                title="Percent to count as a losing trade",
+                parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+                other_schema_values={
+                    "description": "A trade for the training data will be considered as a win if it hits the win percentge before the loss percentage"
+                },
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+                order=3,
+            )
+        elif training_data_type in (
+            utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS_CLOSES,
+            utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS,
+        ):
+            is_in_profit_after_x_bars = self.UI.user_input(
+                "is_in_profit_after_x_bars",
+                enums.UserInputTypes.INT,
+                4,
+                inputs,
+                min_val=0,
+                max_val=100,
+                title="Check if trade is in profit after X bars",
+                parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+                other_schema_values={
+                    "description": (
+                        "For each candle in the training data, it will check if the trade would be in profit after X bars. "
+                        "This value is 4 in the TradingView version and cant be changed."
+                    )
+                },
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+                order=2,
+            )
         required_neighbors: float = neighbors_count / 100 * prediction_threshold
         down_sampling_mode = self.UI.user_input(
             "down_sampler",
@@ -234,9 +327,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             down_sampler=this_down_sampler,
             required_neighbors=required_neighbors,
             training_data_settings=utils.YTrainSettings(
-                training_data_type=utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS,
-                percent_for_a_win=2,
-                percent_for_a_loss=1,
+                training_data_type=training_data_type,
+                percent_for_a_win=percent_for_a_win,
+                percent_for_a_loss=percent_for_a_loss,
+                is_in_profit_after_x_bars=is_in_profit_after_x_bars,
             ),
         )
         # Trade Stats Settings

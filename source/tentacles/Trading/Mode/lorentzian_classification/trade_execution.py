@@ -5,7 +5,9 @@ import numpy.typing as npt
 import octobot_commons.enums as enums
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.modes.script_keywords.context_management as context_management
-from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import UserInputEditorOptionsTypes
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import (
+    UserInputEditorOptionsTypes,
+)
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.market_order as market_order
 import tentacles.Meta.Keywords.scripting_library.backtesting.backtesting_settings as backtesting_settings
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.tools.utilities as basic_utilities
@@ -22,8 +24,8 @@ class LorentzianTradeExecution:
     trading_mode = None
     start_long_trades_cache: dict = {}
     start_short_trades_cache: dict = {}
-    exit_long_trades_cache: dict = None
-    exit_short_trades_cache: dict = None
+    exit_long_trades_cache: dict = {}
+    exit_short_trades_cache: dict = {}
 
     managend_orders_long_settings = None
     managend_orders_short_settings = None
@@ -91,12 +93,16 @@ class LorentzianTradeExecution:
                         )
                     if (
                         self.exit_short_trades_cache
-                        and self.exit_short_trades_cache[trigger_cache_timestamp]
+                        and self.exit_short_trades_cache[ctx.time_frame][
+                            trigger_cache_timestamp
+                        ]
                     ):
                         await exit_short_trade(ctx)
                     elif (
                         self.exit_long_trades_cache
-                        and self.exit_long_trades_cache[trigger_cache_timestamp]
+                        and self.exit_long_trades_cache[ctx.time_frame][
+                            trigger_cache_timestamp
+                        ]
                     ):
                         await exit_long_trade(ctx)
                     return True
@@ -152,8 +158,8 @@ class LorentzianTradeExecution:
         self.start_short_trades_cache[ctx.time_frame] = {}
         self.start_long_trades_cache[ctx.time_frame] = {}
         if has_exit_signals:
-            self.exit_long_trades_cache: dict = {}
-            self.exit_short_trades_cache: dict = {}
+            self.exit_long_trades_cache[ctx.time_frame]: dict = {}
+            self.exit_short_trades_cache[ctx.time_frame]: dict = {}
         trades_count: int = 0
         for index, candle_time in enumerate(candle_times):
             candle_time: int = int(candle_time)
@@ -164,10 +170,22 @@ class LorentzianTradeExecution:
                 candle_time
             ] = start_long_trades[index]
             if has_exit_signals:
-                self.exit_long_trades_cache[candle_time] = exit_long_trades[index]
-                self.exit_short_trades_cache[candle_time] = exit_short_trades[index]
+                self.exit_long_trades_cache[ctx.time_frame][
+                    candle_time
+                ] = exit_long_trades[index]
+                self.exit_short_trades_cache[ctx.time_frame][
+                    candle_time
+                ] = exit_short_trades[index]
                 if exit_long_trades[index] or exit_short_trades[index]:
-                    candle_times_to_whitelist.append(candle_time)
+                    open_time: int = int(
+                        candle_time
+                        - (
+                            enums.TimeFramesMinutes[enums.TimeFrames(ctx.time_frame)]
+                            * 60
+                        )
+                    )
+                    candle_times_to_whitelist.append(open_time)
+                    candle_times_to_whitelist.append(int(candle_time))
             if start_long_trades[index] or start_short_trades[index]:
                 if start_long_trades[index]:
                     trades_count += 1
@@ -177,11 +195,11 @@ class LorentzianTradeExecution:
                     candle_time
                     - (enums.TimeFramesMinutes[enums.TimeFrames(ctx.time_frame)] * 60)
                 )
-                candle_times_to_whitelist.append(candle_time)
+                candle_times_to_whitelist.append(int(candle_time))
                 candle_times_to_whitelist.append(open_time)
         # if len(self.time_frame_filter) <= 1:
         backtesting_settings.register_backtesting_timestamp_whitelist(
-            ctx, list(set(candle_times_to_whitelist))
+            ctx, sorted(list(set(candle_times_to_whitelist)))
         )
         basic_utilities.end_measure_time(
             s_time,

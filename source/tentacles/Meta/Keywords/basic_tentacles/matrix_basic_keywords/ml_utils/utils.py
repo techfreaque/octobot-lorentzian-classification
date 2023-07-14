@@ -1,4 +1,5 @@
 from __future__ import annotations
+import enum
 import typing
 import numpy.typing as npt
 
@@ -27,21 +28,39 @@ def series_from(
         return ml_extensions.n_adx(_high, _low, _close, f_paramA)
 
 
-class YTrainTypes:
-    IS_IN_PROFIT_AFTER_4_BARS = "is_in_profit_after_4_bars"
+class YTrainTypes(enum.Enum):
+    IS_IN_PROFIT_AFTER_4_BARS = "is_in_profit_after_x_bars"
+    IS_IN_PROFIT_AFTER_4_BARS_CLOSES = "is_in_profit_after_x_bars_based_on_closes"
     IS_WINNING_TRADE = "is_winning_trade"
+
+
+class YTrainTypeDescriptions:
+    IS_IN_PROFIT_AFTER_4_BARS: str = "is in profit after x bars"
+    IS_IN_PROFIT_AFTER_4_BARS_CLOSES: str = (
+        "is in profit after x bars based on candle closes (TradingView default)"
+    )
+    IS_WINNING_TRADE: str = "is winning trade based on take profit / stop loss percent"
+
+
+Y_TRAIN_DESCRIPTIONS_TO_TYPES = {
+    YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS: YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS,
+    YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS_CLOSES: YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS_CLOSES,
+    YTrainTypeDescriptions.IS_WINNING_TRADE: YTrainTypes.IS_WINNING_TRADE,
+}
 
 
 class YTrainSettings:
     def __init__(
         self,
-        training_data_type: str,
-        percent_for_a_win: float,
-        percent_for_a_loss: float,
+        training_data_type: YTrainTypes,
+        percent_for_a_win: typing.Optional[float] = None,
+        percent_for_a_loss: typing.Optional[float] = None,
+        is_in_profit_after_x_bars: typing.Optional[int] = None,
     ):
-        self.training_data_type: str = training_data_type
-        self.percent_for_a_win: float = percent_for_a_win
-        self.percent_for_a_loss: float = percent_for_a_loss
+        self.training_data_type: YTrainTypes = training_data_type
+        self.percent_for_a_win: typing.Optional[float] = percent_for_a_win
+        self.is_in_profit_after_x_bars: typing.Optional[int] = is_in_profit_after_x_bars
+        self.percent_for_a_loss: typing.Optional[float] = percent_for_a_loss
 
 
 class ClassificationSettings:
